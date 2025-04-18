@@ -378,4 +378,3 @@ function deleteWorkout(workoutKey) {
     loadWorkoutHistory(database);
   }
 }
-  </script >
