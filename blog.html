@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fitness Buddy Blog</title>
+  <style>
+    /* Background setup with full-screen fitness image */
+    /* Background image */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: url('image.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #ffffff;
+  animation: fadeInBody 2s ease-in;
+}
+
+/* Overlay with blue tint and padding */
+.overlay {
+  
+  padding: 60px 40px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Page title */
+.animated-title {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 30px;
+  animation: fadeInTitle 1.2s ease-out;
+}
+
+.animated-title span {
+  color: #ffffff;
+}
+
+/* Paragraphs */
+.animated-text {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+  color: #ffffff;
+  animation: fadeInText 1.5s ease-in;
+}
+
+/* Quotes */
+.quote {
+  margin-top: 25px;
+  font-style: italic;
+  font-size: 1.1rem;
+  color: #ffffff;
+  padding-left: 20px;
+  border-left: 4px solid #ffffff;
+  opacity: 0;
+  animation: fadeInQuote 1s ease forwards;
+}
+
+/* Delayed animation for quotes */
+.quote:nth-of-type(3) { animation-delay: 0.5s; }
+.quote:nth-of-type(4) { animation-delay: 1s; }
+.quote:nth-of-type(5) { animation-delay: 1.5s; }
+.quote:nth-of-type(6) { animation-delay: 2s; }
+.quote:nth-of-type(7) { animation-delay: 2.5s; }
+.quote:nth-of-type(8) { animation-delay: 3s; }
+.quote:nth-of-type(9) { animation-delay: 3.5s; }
+
+/* Animations */
+@keyframes fadeInBody {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
+
+@keyframes fadeInTitle {
+  from {opacity: 0; transform: translateX(-40px);}
+  to {opacity: 1; transform: translateX(0);}
+}
+
+@keyframes fadeInText {
+  from {opacity: 0; transform: translateX(40px);}
+  to {opacity: 1; transform: translateX(0);}
+}
+
+@keyframes fadeInQuote {
+  from {opacity: 0; transform: scale(0.9);}
+  to {opacity: 1; transform: scale(1);}
+}
+
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <div class="blog-container">
+      <h1 class="animated-title">The Importance of <span>Consistency</span> in Fitness</h1>
+      
+      <p class="animated-text">
+        Staying consistent is the most important principle when it comes to achieving fitness goals.
+        While motivation gets you started, it's consistency that keeps you going. Building routines,
+        sticking to your workout plan, and making healthy food choices every day are what lead to long-term progress.
+      </p>
+      
+      <p class="animated-text">
+        Whether your goal is to lose weight, build muscle, or improve overall wellness, creating habits
+        you can stick to is crucial. Remember, it's not about being perfect; it's about being persistent.
+        Progress is built through daily effort.
+      </p>
+
+      <!-- Motivational Quotes -->
+      <div class="quote animated-quote">"Push yourself because no one else is going to do it for you."</div>
+      <div class="quote animated-quote">"Success starts with self-discipline."</div>
+      <div class="quote animated-quote">"Discipline is doing what needs to be done, even when you don’t want to."</div>
+      <div class="quote animated-quote">"Don’t limit your challenges, challenge your limits."</div>
+      <div class="quote animated-quote">"Your body can stand almost anything. It’s your mind that you have to convince."</div>
+      <div class="quote animated-quote">"Small progress is still progress. Keep going!"</div>
+      <div class="quote animated-quote">"Consistency is what transforms average into excellence."</div>
+    </div>
+  </div>
+</body>
+</html>
