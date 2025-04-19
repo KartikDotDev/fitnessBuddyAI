@@ -61,47 +61,50 @@ onAuthStateChanged(auth, (user) => {
   };
   checkNavbarAndUpdate();
 
-  const currentPath = window.location.pathname;
-  const normalizedCurrentPath =
-    currentPath.endsWith("/") && currentPath.length > 1
-      ? currentPath.slice(0, -1)
-      : currentPath;
+  let currentPath = window.location.pathname;
 
-  const publicPages = [
+  if (currentPath.endsWith("/index.html")) {
+    currentPath = "/";
+  } else if (currentPath !== "/" && currentPath.endsWith("/")) {
+    currentPath = currentPath.slice(0, -1);
+  }
+
+  const normalizeRoute = (route) => {
+    if (!route) return null;
+    if (route.endsWith("/index.html")) return "/";
+    if (route !== "/" && route.endsWith("/")) return route.slice(0, -1);
+    return route;
+  };
+
+  const normalizedPublicPages = [
     AppConfig.ROUTES.HOME,
     AppConfig.ROUTES.INDEX,
     AppConfig.ROUTES.SIGNUP,
     AppConfig.ROUTES.AUTH,
     AppConfig.ROUTES.ABOUT,
     AppConfig.ROUTES.BLOG,
-  ].filter((p) => p);
-  const authPages = [
+  ]
+    .map(normalizeRoute)
+    .filter((p) => p !== null);
+
+  const normalizedAuthPages = [
     AppConfig.ROUTES.SIGNUP,
     AppConfig.ROUTES.LOGIN,
     AppConfig.ROUTES.AUTH,
-  ].filter((p) => p);
+  ]
+    .map(normalizeRoute)
+    .filter((p) => p !== null);
 
-  const isPublicPage = publicPages.some((page) => {
-    const normalizedPage =
-      page.endsWith("/") && page.length > 1 ? page.slice(0, -1) : page;
-    if (normalizedPage === "/" || normalizedPage === "/index.html") {
-      return (
-        normalizedCurrentPath === "/" || normalizedCurrentPath === "/index.html"
-      );
-    }
-    return normalizedCurrentPath === normalizedPage;
-  });
+  const isAuthPage = normalizedAuthPages.includes(currentPath);
 
-  const isAuthPage = authPages.some((page) => {
-    const normalizedPage =
-      page.endsWith("/") && page.length > 1 ? page.slice(0, -1) : page;
-    return normalizedCurrentPath === normalizedPage;
-  });
+  const isPublicPage =
+    currentPath === "/" || normalizedPublicPages.includes(currentPath);
+  const isProtectedPage = !isPublicPage && !isAuthPage;
 
   console.log(
-    `Auth Guard Check: User=${
-      user ? user.uid : "null"
-    }, Path=${currentPath}, IsAuthPage=${isAuthPage}, IsPublicPage=${isPublicPage}`
+    `Auth Guard Check: User=${user ? user.uid : "null"}, Path=${
+      window.location.pathname
+    } (Normalized: ${currentPath}), IsAuthPage=${isAuthPage}, IsPublicPage=${isPublicPage}, IsProtectedPage=${isProtectedPage}`
   );
 
   if (user) {
@@ -109,16 +112,27 @@ onAuthStateChanged(auth, (user) => {
       console.log(
         "Auth Guard: User logged in, on auth page. Redirecting to Dashboard."
       );
+
       redirectTo("DASHBOARD", true);
+    } else {
+      console.log(
+        "Auth Guard: User logged in, not on auth page. No redirect needed."
+      );
     }
   } else {
-    if (!isPublicPage) {
+    if (isProtectedPage) {
       console.log(
-        "Auth Guard: User not logged in, on protected page. Redirecting to Sign Up/Login."
+        "Auth Guard: User not logged in, on protected page. Redirecting to Sign Up."
       );
       redirectTo("SIGNUP", true);
+    } else {
+      console.log(
+        "Auth Guard: User not logged in, on public/auth page. No redirect needed."
+      );
     }
   }
 });
 
-console.log("Auth Guard initialized with Navbar UI update logic.");
+console.log(
+  "Auth Guard initialized with improved path normalization and redirection logic."
+);
