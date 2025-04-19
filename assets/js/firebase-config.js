@@ -1,34 +1,11 @@
-
-// Import the functions you need from the SDKs you need
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { AppConfig } from "./config.js";
 
-// TODO: Add SDKs for Firebase products that you want to use
+const app = initializeApp(AppConfig.FIREBASE_CONFIG);
 
-// https://firebase.google.com/docs/web/setup#available-libraries
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-
-
-// Your web app's Firebase configuration
-
-const firebaseConfig = {
-
-  apiKey: "AIzaSyADyOwKW0k9XKyIL-MBAacRapkuZQBD5x8",
-
-  authDomain: "fitnessbuddyai.firebaseapp.com",
-
-  projectId: "fitnessbuddyai",
-
-  storageBucket: "fitnessbuddyai.firebasestorage.app",
-
-  messagingSenderId: "1084878722704",
-
-  appId: "1:1084878722704:web:062167efe923f8d0002a15"
-
-};
-
-
-const app = initializeApp(firebaseConfig);
-
-export default app;
-
+export { app, auth, db };

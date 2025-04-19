@@ -1,380 +1,332 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { app, auth, db } from "./firebase-config.js";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  Timestamp,
+  query,
+  where,
+  orderBy,
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import {
+  onAuthStateChanged,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { redirectTo } from "./utils/navigation.js";
+import { showNotification } from "./utils/ui-helpers.js";
+import { AppConfig } from "./config.js";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyAK2rLIcEm4ZIUodPWhyQwzwTVJM2wZWzo",
-  authDomain: "fitness-buddy-e44f7.firebaseapp.com",
-  projectId: "fitness-buddy-e44f7",
-  storageBucket: "fitness-buddy-e44f7.firebasestorage.app",
-  messagingSenderId: "750411075422",
-  appId: "1:750411075422:web:2ef218847e9c9fe74e09cf",
-  measurementId: "G-VE18CRGTZV"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-let database;
-
-// Wait for DOM to fully load
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize date input to today
-  document.getElementById('workout-date').valueAsDate = new Date();
-
-  // Initialize Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyAK2rLIcEm4ZIUodPWhyQwzwTVJM2wZWzo",
-    authDomain: "fitness-buddy-e44f7.firebaseapp.com",
-    projectId: "fitness-buddy-e44f7",
-    storageBucket: "fitness-buddy-e44f7.firebasestorage.app",
-    messagingSenderId: "750411075422",
-    appId: "1:750411075422:web:2ef218847e9c9fe74e09cf",
-    measurementId: "G-VE18CRGTZV"
-  };
-
-  // Initialize Firebase
-  //const workoutsRef = database.ref('workouts');
-
-  // Load workout history from Firebase
-  loadWorkoutHistory();
-
-  // Event Listeners
-  document.getElementById('add-exercise').addEventListener('click', addExerciseInput);
-  document.getElementById('workout-form').addEventListener('submit', saveWorkout);
-
-  // Add initial exercise input
-  addExerciseInput();
-});
-
-
-
-// Workout plans data
-const workoutPlans = {
-  'full-body': [
-    { name: 'Squats', sets: 3, reps: 12 },
-    { name: 'Push-ups', sets: 3, reps: 15 },
-    { name: 'Deadlifts', sets: 3, reps: 10 },
-    { name: 'Bench Press', sets: 3, reps: 10 },
-    { name: 'Shoulder Press', sets: 3, reps: 12 }
-  ],
-  'upper-body': [
-    { name: 'Bench Press', sets: 4, reps: 10 },
-    { name: 'Pull-ups', sets: 3, reps: 8 },
-    { name: 'Shoulder Press', sets: 3, reps: 12 },
-    { name: 'Bicep Curls', sets: 3, reps: 15 },
-    { name: 'Tricep Dips', sets: 3, reps: 15 }
-  ],
-  'lower-body': [
-    { name: 'Squats', sets: 4, reps: 12 },
-    { name: 'Deadlifts', sets: 3, reps: 10 },
-    { name: 'Lunges', sets: 3, reps: 10 },
-    { name: 'Leg Press', sets: 3, reps: 12 },
-    { name: 'Calf Raises', sets: 3, reps: 20 }
-  ],
-  'core': [
-    { name: 'Plank', sets: 3, reps: '30 sec' },
-    { name: 'Crunches', sets: 3, reps: 20 },
-    { name: 'Russian Twists', sets: 3, reps: 15 },
-    { name: 'Leg Raises', sets: 3, reps: 12 },
-    { name: 'Mountain Climbers', sets: 3, reps: '30 sec' }
-  ],
-  'hiit': [
-    { name: 'Jumping Jacks', sets: 1, reps: '45 sec' },
-    { name: 'Burpees', sets: 1, reps: '45 sec' },
-    { name: 'High Knees', sets: 1, reps: '45 sec' },
-    { name: 'Mountain Climbers', sets: 1, reps: '45 sec' },
-    { name: 'Jump Squats', sets: 1, reps: '45 sec' }
-  ],
-  'custom': []
-};
-
-// Function to load a workout plan
-function loadWorkoutPlan(planType) {
-  // Clear current exercises
-  document.getElementById('exercise-list').innerHTML = '';
-
-  // Set workout type in dropdown
-  const workoutTypeSelect = document.getElementById('workout-type');
-
-  switch (planType) {
-    case 'full-body':
-      workoutTypeSelect.value = 'Full Body';
-      break;
-    case 'upper-body':
-      workoutTypeSelect.value = 'Upper Body';
-      break;
-    case 'lower-body':
-      workoutTypeSelect.value = 'Lower Body';
-      break;
-    case 'core':
-      workoutTypeSelect.value = 'Core';
-      break;
-    case 'hiit':
-      workoutTypeSelect.value = 'HIIT';
-      break;
-    case 'custom':
-      workoutTypeSelect.value = 'Custom';
-      break;
-  }
-
-  // If it's a custom workout, just add an empty exercise input
-  if (planType === 'custom') {
-    document.getElementById('exercises-container').innerHTML = '';
-    addExerciseInput();
-    return;
-  }
-
-  // Load exercises from the selected plan
-  const exercises = workoutPlans[planType];
-
-  // Add exercises to the list
-  exercises.forEach(exercise => {
-    addExerciseToList(exercise.name, exercise.sets, exercise.reps);
-
-    const container = document.getElementById('exercises-container');
-    const inputDiv = document.createElement('div');
-    inputDiv.innerHTML = `
-                  <input type="hidden" class="exercise-name-hidden" value="${exercise.name}">
-                  <input type="hidden" class="exercise-sets-hidden" value="${exercise.sets}">
-                  <input type="hidden" class="exercise-reps-hidden" value="${exercise.reps}">
-                `;
-    container.appendChild(inputDiv);
-  });
-
-
-  // Scroll to the workout form
-  document.querySelector('.workout-log').scrollIntoView({ behavior: 'smooth' });
-}
-
-// Function to add exercise input fields
-function addExerciseInput() {
-  const container = document.createElement('div');
-  container.className = 'exercise-inputs';
-  container.innerHTML = `
-                <input type="text" placeholder="Exercise name" class="exercise-name" required>
-                <input type="number" placeholder="Sets" class="exercise-sets" min="1" required>
-                <input type="text" placeholder="Reps/Duration" class="exercise-reps" required>
-                <button type="button" class="btn-add-exercise" onclick="addExerciseFromInput(this)">Add</button>
-            `;
-
-  document.getElementById('exercises-container').appendChild(container);
-}
-
-// Function to add an exercise from input to the list
-
-
-// Function to add exercise to the list
-function addExerciseToList(name, sets, reps) {
-  const exerciseList = document.getElementById('exercise-list');
-
-  const li = document.createElement('li');
-  li.className = 'exercise-list-item';
-  li.innerHTML = `
-                <div class="exercise-details">
-                    <strong>${name}</strong> - ${sets} sets × ${reps}
-                </div>
-                <span class="remove-exercise" onclick="removeExercise(this)">Remove</span>
-            `;
-
-  exerciseList.appendChild(li);
-}
-// First, add a global exercises array at the top of your script
 let exercises = [];
 
-// Then fix the addExerciseFromInput function:
-function addExerciseFromInput(button) {
-  const container = button.parentElement;
-  const nameInput = container.querySelector('.exercise-name');
-  const setsInput = container.querySelector('.exercise-sets');
-  const repsInput = container.querySelector('.exercise-reps');
+const addExerciseBtn = document.getElementById("add-exercise");
+const exerciseList = document.getElementById("exercise-list");
+const form = document.getElementById("workout-form");
+const historyContainer = document.getElementById("history-container");
+const noHistory = document.getElementById("no-history");
+const loadingHistory = document.querySelector(".loading-history");
+const logoutBtn = document.getElementById("logout-btn");
+const planCardsContainer = document.querySelector(".plans-container");
 
-  const name = nameInput.value.trim();
-  const sets = setsInput.value.trim();
-  const reps = repsInput.value.trim();
-
-  if (name && sets && reps) {
-    // Check if exercises is defined, if not initialize it
-    if (!window.exercises) {
-      window.exercises = [];
-    }
-
-    // Add to exercises array
-    window.exercises.push({ name, sets, reps });
-
-    // Add to the visual list
-    addExerciseToList(name, sets, reps);
-
-    // Clear the inputs
-    nameInput.value = '';
-    setsInput.value = '';
-    repsInput.value = '';
-    nameInput.focus();
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    console.log("Workout Page: User not logged in, redirecting...");
+    redirectTo("SIGNUP");
   } else {
-    alert('Please fill in all exercise fields');
+    console.log("Workout Page: User logged in:", user.uid);
+    loadWorkoutHistory(user.uid);
   }
-}
+});
 
-// Function to remove an exercise from the list
-function removeExercise(span) {
-  const li = span.parentElement;
-  const index = Array.from(li.parentElement.children).indexOf(li);
-
-  // ✅ Remove from exercises array
-  exercises.splice(index, 1);
-
-  // ✅ Remove from UI
-  li.remove();
-}
-
-function saveWorkout(e) {
-  e.preventDefault(); // Prevent default form submission
-
-  // Get form values
-  const date = document.getElementById('workout-date').value;
-  const type = document.getElementById('workout-type').value;
-  const duration = document.getElementById('workout-duration').value;
-  const notes = document.getElementById('workout-notes').value;
-
-  // --- FIX: Use the globally managed 'exercises' array ---
-  // This array is correctly updated by addExerciseFromInput and removeExercise
-  const currentWorkoutExercises = [...exercises]; // Use the global exercises array
-
-  // Validate form - including check for exercises
-  if (!date || !type || !duration || currentWorkoutExercises.length === 0) { // Check if exercises were added
-    alert('Please fill in date, type, duration, and add at least one exercise.');
-    return;
-  }
-
-  // Create workout object
-  const workout = {
-    createdAt: firebase.database.ServerValue.TIMESTAMP, // Use Firebase server timestamp
-    date,
-    type,
-    duration: parseInt(duration) || 0, // Ensure duration is a number
-    notes,
-    exercises: currentWorkoutExercises // Use the collected exercises
-  };
-
-  // --- Firebase Interaction ---
-  // Ensure 'database' is a valid Firebase reference object
-  if (!database || typeof database.ref !== 'function') {
-    console.error("Firebase database reference is not initialized correctly.");
-    alert("Error: Cannot connect to the database. Please try again later.");
-    return;
-  }
-
-  // Reference the 'workouts' path
-  const workoutsRef = database.ref("workouts");
-
-  // Use push to generate a unique key and save data
-  workoutsRef.push(workout)
-    .then(() => {
-      // SUCCESS! Now run UI updates
-      console.log("Workout saved successfully to Firebase!");
-      alert('Workout saved successfully!');
-
-      // Reload workout history (if function exists)
-      if (typeof loadWorkoutHistory === 'function') {
-        loadWorkoutHistory();
-      }
-
-      // --- FIX: Reset logic moved inside .then() ---
-      // Reset form
-      const workoutForm = document.getElementById('workout-form');
-      if (workoutForm) workoutForm.reset();
-
-      const workoutDateInput = document.getElementById('workout-date');
-      if (workoutDateInput) workoutDateInput.valueAsDate = new Date(); // Set date back to today
-
-      const exerciseList = document.getElementById('exercise-list');
-      if (exerciseList) exerciseList.innerHTML = ''; // Clear UI list
-
-      // Clear the global exercises array after successful save
-      exercises = []; // Reset the global array
-
-      const exercisesContainer = document.getElementById('exercises-container');
-      // Clear existing input fields before adding a new one
-      if (exercisesContainer) {
-        exercisesContainer.innerHTML = '';
-      }
-
-
-      // Add back initial exercise input fields (if function exists)
-      if (typeof addExerciseInput === 'function') {
-        addExerciseInput(); // Add a fresh input row
-      }
-    })
-    .catch((error) => {
-      // ERROR! Log and inform user
-      console.error("Error saving workout to Firebase: ", error);
-      alert(`Error saving workout: ${error.message}. Please check console for details.`);
-      // Don't reset the form here so the user doesn't lose input
-    });
-}
-
-// Ensure the global exercises array is defined at the top level of your script
-// let exercises = []; // Add this line if it's not already there
-
-// Function to load workout history
-function loadWorkoutHistory() {
-  const historyContainer = document.getElementById('history-container');
-  const noHistoryMessage = document.getElementById('no-history');
-
-  database.ref('workouts').on('value', (snapshot) => {
-    const workouts = snapshot.val();
-    historyContainer.innerHTML = '';
-
-    if (!workouts) {
-      noHistoryMessage.style.display = 'block';
+if (addExerciseBtn) {
+  addExerciseBtn.addEventListener("click", () => {
+    const name = prompt("Exercise Name:");
+    if (!name) return;
+    const sets = prompt("Sets:");
+    if (!sets) return;
+    const reps = prompt("Reps (e.g., 12 or 45s):");
+    if (!reps) return;
+    const parsedSets = parseInt(sets);
+    if (isNaN(parsedSets) || parsedSets <= 0) {
+      showNotification("Invalid sets.", "error");
       return;
     }
-
-    noHistoryMessage.style.display = 'none';
-
-    const workoutArray = Object.entries(workouts).map(([key, val]) => ({ key, ...val }));
-    workoutArray.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    workoutArray.forEach(workout => {
-      const workoutElement = document.createElement('div');
-      workoutElement.className = 'history-item';
-      const formattedDate = new Date(workout.date).toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      });
-
-      let exercisesHTML = '';
-      workout.exercises.forEach(exercise => {
-        exercisesHTML += `<div class="history-exercise"><strong>${exercise.name}</strong> - ${exercise.sets} sets × ${exercise.reps}</div>`;
-      });
-
-      workoutElement.innerHTML = `
-                  <div class="history-date">${formattedDate}</div>
-                  <div><strong>Type:</strong> ${workout.type}</div>
-                  <div><strong>Duration:</strong> ${workout.duration} minutes</div>
-                  ${workout.notes ? `<div><strong>Notes:</strong> ${workout.notes}</div>` : ''}
-                  <div class="history-exercises">
-                    <div><strong>Exercises:</strong></div>
-                    ${exercisesHTML}
-                  </div>
-                  <button class="btn" onclick="deleteWorkout('${workout.key}')">Delete</button>
-                `;
-
-      historyContainer.appendChild(workoutElement);
-    });
+    const exercise = { name: name.trim(), sets: parsedSets, reps: reps.trim() };
+    exercises.push(exercise);
+    addExerciseToList(exercise.name, exercise.sets, exercise.reps);
+  });
+}
+if (form) {
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const dateInput = document.getElementById("workout-date");
+    const typeInput = document.getElementById("workout-type");
+    const durationInput = document.getElementById("workout-duration");
+    const notesInput = document.getElementById("workout-notes");
+    const date = dateInput?.value;
+    const type = typeInput?.value;
+    const duration = durationInput?.value;
+    const notes = notesInput?.value || "";
+    if (!date || !type || !duration) {
+      showNotification("Date, Type, and Duration are required.", "error");
+      return;
+    }
+    const user = auth.currentUser;
+    if (!user) {
+      showNotification("Must be logged in.", "error");
+      redirectTo("SIGNUP");
+      return;
+    }
+    const durationNum = parseInt(duration);
+    if (isNaN(durationNum) || durationNum <= 0) {
+      showNotification("Invalid duration.", "error");
+      return;
+    }
+    if (exercises.length === 0 && !confirm("No exercises added. Save anyway?"))
+      return;
+    const workoutData = {
+      uid: user.uid,
+      date,
+      type,
+      duration: durationNum,
+      notes,
+      exercises,
+      timestamp: Timestamp.fromDate(new Date()),
+    };
+    const submitButton = form.querySelector(".btn-submit");
+    if (submitButton) submitButton.disabled = true;
+    try {
+      await addDoc(
+        collection(db, AppConfig.FIRESTORE_COLLECTIONS.WORKOUTS),
+        workoutData
+      );
+      showNotification("Workout saved!", "success");
+      form.reset();
+      exerciseList.innerHTML = "";
+      exercises = [];
+      loadWorkoutHistory(user.uid);
+    } catch (error) {
+      console.error("Save error:", error);
+      showNotification("Error saving workout.", "error");
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+}
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    if (confirm("Logout?")) {
+      signOut(auth)
+        .then(() => {
+          showNotification("Logged out.", "info");
+          redirectTo("SIGNUP");
+        })
+        .catch((error) => {
+          console.error("Logout Error:", error);
+          showNotification("Logout failed.", "error");
+        });
+    }
+  });
+}
+if (planCardsContainer) {
+  planCardsContainer.addEventListener("click", (event) => {
+    const button = event.target.closest(".btn-load-plan");
+    if (button) {
+      const planCard = button.closest(".plan-card");
+      if (planCard) {
+        const planName = planCard.dataset.plan;
+        if (planName) loadWorkoutPlan(planName);
+      }
+    }
   });
 }
 
+function addExerciseToList(name, sets, reps) {
+  if (!exerciseList) return;
+  const li = document.createElement("li");
+  li.className = "exercise-list-item";
+  li.dataset.name = name;
+  li.dataset.sets = sets;
+  li.dataset.reps = reps;
+  li.innerHTML = `<div class="exercise-details">${name}</div><div>${sets} sets × ${reps}</div>`;
+  const removeBtn = document.createElement("span");
+  removeBtn.textContent = " ❌";
+  removeBtn.className = "remove-exercise";
+  removeBtn.style.cursor = "pointer";
+  removeBtn.style.marginLeft = "10px";
+  removeBtn.setAttribute("aria-label", `Remove ${name}`);
+  removeBtn.onclick = () => {
+    li.remove();
+    const indexToRemove = exercises.findIndex(
+      (ex) => ex.name === name && ex.sets === sets && ex.reps === reps
+    );
+    if (indexToRemove > -1) exercises.splice(indexToRemove, 1);
+    console.log("Exercises after removal:", exercises);
+  };
+  li.appendChild(removeBtn);
+  exerciseList.appendChild(li);
+}
 
-// Function to delete a workout
-function deleteWorkout(workoutKey) {
-  if (confirm('Are you sure you want to delete this workout?')) {
-    database.ref("workouts/" + workoutKey).remove();
+async function loadWorkoutHistory(userId) {
+  if (!historyContainer || !noHistory || !loadingHistory) return;
+  if (!userId) {
+    console.log("No user ID for history.");
+    historyContainer.innerHTML = "<p>Please log in to see history.</p>";
+    noHistory.style.display = "none";
+    loadingHistory.style.display = "none";
+    return;
+  }
 
+  loadingHistory.style.display = "block";
+  noHistory.style.display = "none";
+  historyContainer.innerHTML = "";
 
-    // Reload workout history
-    loadWorkoutHistory(database);
+  try {
+    const workoutsRef = collection(
+      db,
+      AppConfig.FIRESTORE_COLLECTIONS.WORKOUTS
+    );
+
+    const q = query(workoutsRef, where("uid", "==", userId));
+
+    const querySnapshot = await getDocs(q);
+    loadingHistory.style.display = "none";
+
+    if (querySnapshot.empty) {
+      noHistory.style.display = "block";
+    } else {
+      noHistory.style.display = "none";
+
+      const workoutDocs = querySnapshot.docs;
+
+      workoutDocs.sort((docA, docB) => {
+        const timeA = docA.data().timestamp?.toMillis() || 0;
+        const timeB = docB.data().timestamp?.toMillis() || 0;
+        return timeB - timeA;
+      });
+
+      workoutDocs.forEach((doc) => {
+        const workout = doc.data();
+        const div = document.createElement("div");
+        div.className = "history-card";
+
+        const workoutDate = workout.timestamp
+          ? workout.timestamp.toDate().toLocaleDateString()
+          : workout.date || "Unknown Date";
+
+        div.innerHTML = `
+          <h4>${workoutDate} - ${workout.type || "Workout"}</h4>
+          <p><strong>Duration:</strong> ${workout.duration || "?"} minutes</p>
+          ${
+            workout.notes
+              ? `<p><strong>Notes:</strong> ${workout.notes}</p>`
+              : ""
+          }
+          ${
+            workout.exercises && workout.exercises.length > 0
+              ? `
+            <h5>Exercises Logged:</h5>
+            <ul class="exercise-list">
+              ${workout.exercises
+                .map(
+                  (ex) => `
+              <li class="exercise-list-item">
+                  <div class="exercise-details">${ex.name || "?"}</div>
+                  <div>${ex.sets || "?"} sets × ${ex.reps || "?"} reps</div>
+              </li>`
+                )
+                .join("")}
+            </ul>`
+              : ""
+          }
+        `;
+        historyContainer.appendChild(div);
+      });
+    }
+  } catch (error) {
+    console.error("Error loading workout history:", error);
+
+    if (error.code === "permission-denied") {
+      showNotification(
+        "Error: Permissions missing to read workout history.",
+        "error"
+      );
+      historyContainer.innerHTML =
+        "<p>Could not load history due to permissions.</p>";
+    } else {
+      showNotification("Failed to load workout history.", "error");
+      historyContainer.innerHTML =
+        "<p>Error loading history. Please try refreshing.</p>";
+    }
+    noHistory.style.display = "none";
+    loadingHistory.style.display = "none";
   }
 }
+
+function loadWorkoutPlan(planName) {
+  exercises = [];
+  if (exerciseList) exerciseList.innerHTML = "";
+  const PRESET_PLANS = {
+    "full-body": [
+      { name: "Squats", sets: 3, reps: 12 },
+      { name: "Push-ups", sets: 3, reps: 15 },
+      { name: "Bent-Over Rows", sets: 3, reps: 12 },
+      { name: "Overhead Press", sets: 3, reps: 10 },
+    ],
+    "upper-body": [
+      { name: "Bench Press", sets: 3, reps: 10 },
+      { name: "Shoulder Press", sets: 3, reps: 12 },
+      { name: "Pull-ups / Lat Pulldown", sets: 3, reps: 8 },
+      { name: "Bicep Curls", sets: 3, reps: 12 },
+    ],
+    "lower-body": [
+      { name: "Squats", sets: 3, reps: 10 },
+      { name: "Romanian Deadlifts", sets: 3, reps: 12 },
+      { name: "Leg Press", sets: 3, reps: 15 },
+      { name: "Calf Raises", sets: 3, reps: 20 },
+    ],
+    core: [
+      { name: "Plank", sets: 3, reps: "60s" },
+      { name: "Crunches", sets: 3, reps: 20 },
+      { name: "Russian Twists", sets: 3, reps: 15 },
+      { name: "Bird Dog", sets: 3, reps: 12 },
+    ],
+    hiit: [
+      { name: "Jumping Jacks", sets: 1, reps: "45s work, 15s rest" },
+      { name: "High Knees", sets: 1, reps: "45s work, 15s rest" },
+      { name: "Burpees", sets: 1, reps: "45s work, 15s rest" },
+      { name: "Mountain Climbers", sets: 1, reps: "45s work, 15s rest" },
+    ],
+    custom: [],
+  };
+  const planExercises = PRESET_PLANS[planName];
+  const typeDropdown = document.getElementById("workout-type");
+  if (planName === "custom") {
+    showNotification("Add exercises manually below.", "info");
+    if (typeDropdown) typeDropdown.value = "Custom";
+  } else if (planExercises && planExercises.length > 0) {
+    if (typeDropdown) {
+      const matchingOption = Array.from(typeDropdown.options).find((opt) =>
+        opt.value.toLowerCase().includes(planName.split("-")[0])
+      );
+      typeDropdown.value = matchingOption ? matchingOption.value : "Custom";
+    }
+    planExercises.forEach((ex) => {
+      exercises.push(ex);
+      addExerciseToList(ex.name, ex.sets, ex.reps);
+    });
+    showNotification(
+      `${planName.replace("-", " ").toUpperCase()} plan loaded.`,
+      "success"
+    );
+  } else if (planExercises) {
+    showNotification(
+      `No exercises defined for ${planName} plan. Add manually.`,
+      "info"
+    );
+    if (typeDropdown) typeDropdown.value = "Custom";
+  } else {
+    showNotification(`Unknown plan: ${planName}`, "error");
+  }
+}
+
+console.log("workout.js loaded (Client-side history sorting).");

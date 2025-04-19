@@ -1,265 +1,349 @@
+import { auth, db } from "./firebase-config.js";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
-// Firebase configuration - Replace with your actual Firebase config
-const firebaseConfig = {
-    apiKey: "AIzaSyAK2rLIcEm4ZIUodPWhyQwzwTVJM2wZWzo",
-authDomain: "fitness-buddy-e44f7.firebaseapp.com",
-projectId: "fitness-buddy-e44f7",
-storageBucket: "fitness-buddy-e44f7.firebasestorage.app",
-messagingSenderId: "750411075422",
-appId: "1:750411075422:web:2ef218847e9c9fe74e09cf",
-measurementId: "G-VE18CRGTZV"
-};
+import {
+  doc,
+  setDoc,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { AppConfig } from "./config.js";
+import { redirectTo } from "./utils/navigation.js";
+import { showNotification } from "./utils/ui-helpers.js";
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+const signupTab = document.getElementById("signup-tab");
+const loginTab = document.getElementById("login-tab");
+const signupFormContainer = document.getElementById("signup-form-container");
+const loginFormContainer = document.getElementById("login-form-container");
+const toLoginLink = document.getElementById("to-login");
+const toSignupLink = document.getElementById("to-signup");
+const signupForm = document.getElementById("signup-form");
+const loginForm = document.getElementById("login-form");
+const resetPasswordLink = document.getElementById("reset-password-link");
 
-// Toggle between sign up and login forms
-const signupTab = document.getElementById('signup-tab');
-const loginTab = document.getElementById('login-tab');
-const signupFormContainer = document.getElementById('signup-form-container');
-const loginFormContainer = document.getElementById('login-form-container');
-const toLoginLink = document.getElementById('to-login');
-const toSignupLink = document.getElementById('to-signup');
-
-// Function to show signup form
 function showSignup() {
-    loginTab.classList.remove('active');
-    signupTab.classList.add('active');
-    loginFormContainer.classList.remove('active');
-    signupFormContainer.classList.add('active');
-    clearErrorMessages();
+  loginTab?.classList.remove("active");
+  signupTab?.classList.add("active");
+  loginFormContainer?.classList.remove("active");
+  signupFormContainer?.classList.add("active");
+  clearErrorMessages();
 }
 
-// Function to show login form
 function showLogin() {
-    signupTab.classList.remove('active');
-    loginTab.classList.add('active');
-    signupFormContainer.classList.remove('active');
-    loginFormContainer.classList.add('active');
-    clearErrorMessages();
+  signupTab?.classList.remove("active");
+  loginTab?.classList.add("active");
+  signupFormContainer?.classList.remove("active");
+  loginFormContainer?.classList.add("active");
+  clearErrorMessages();
 }
 
-// Clear all error messages
 function clearErrorMessages() {
-    document.querySelectorAll('.error-message').forEach(el => {
-        el.style.display = 'none';
-        el.textContent = '';
-    });
+  document.querySelectorAll(".error-message").forEach((el) => {
+    el.style.display = "none";
+    el.textContent = "";
+  });
 }
 
-// Show error message for a specific field
-function showError(fieldId, message) {
-    const errorElement = document.getElementById(fieldId + '-error');
-    if (errorElement) {
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-    }
+function showError(formOrFieldId, message, isFormError = false) {
+  const errorElement = !isFormError
+    ? document.getElementById(formOrFieldId + "-error")
+    : document.getElementById(formOrFieldId + "-form-error");
+
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = "block";
+  } else {
+    console.warn(
+      `Error element not found for ID: ${formOrFieldId}-${
+        isFormError ? "form-" : ""
+      }error`
+    );
+    showNotification(`Error: ${message}`, "error");
+  }
 }
 
-// Toggle password visibility
-function togglePassword(inputId) {
-    const passwordInput = document.getElementById(inputId);
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-    } else {
-        passwordInput.type = 'password';
-    }
+function togglePasswordVisibility(targetInputId) {
+  const passwordInput = document.getElementById(targetInputId);
+  if (!passwordInput) return;
+
+  const icon = passwordInput
+    .closest(".password-container")
+    ?.querySelector(".toggle-password");
+  if (passwordInput.type === "password") {
+    passwordInput.type = "text";
+    if (icon) icon.textContent = "🔒";
+  } else {
+    passwordInput.type = "password";
+    if (icon) icon.textContent = "👁️";
+  }
 }
 
-// Show loading spinner
-function showLoading(buttonId) {
-    const button = document.getElementById(buttonId);
-    const spinner = document.getElementById(buttonId.replace('btn', 'spinner'));
-    button.disabled = true;
-    spinner.style.display = 'inline-block';
+function setLoadingState(buttonId, isLoading) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+
+  const spinner = button.querySelector(".spinner");
+
+  button.disabled = isLoading;
+  if (spinner) {
+    spinner.style.display = isLoading ? "inline-block" : "none";
+  }
 }
 
-// Hide loading spinner
-function hideLoading(buttonId) {
-    const button = document.getElementById(buttonId);
-    const spinner = document.getElementById(buttonId.replace('btn', 'spinner'));
-    button.disabled = false;
-    spinner.style.display = 'none';
-}
-
-// Event listeners
-signupTab.addEventListener('click', showSignup);
-loginTab.addEventListener('click', showLogin);
-toLoginLink.addEventListener('click', showLogin);
-toSignupLink.addEventListener('click', showSignup);
-
-// Sign up with email and password
-document.getElementById('signup-form').addEventListener('submit', async function(e) {
+if (signupTab) signupTab.addEventListener("click", showSignup);
+if (loginTab) loginTab.addEventListener("click", showLogin);
+if (toLoginLink)
+  toLoginLink.addEventListener("click", (e) => {
     e.preventDefault();
-    clearErrorMessages();
-    
-    const name = document.getElementById('signup-name').value;
-    const email = document.getElementById('signup-email').value;
-    const password = document.getElementById('signup-password').value;
-    const confirmPassword = document.getElementById('signup-confirm').value;
+    showLogin();
+  });
+if (toSignupLink)
+  toSignupLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    showSignup();
+  });
 
-    // Client-side validation
-    if (password !== confirmPassword) {
-        showError('signup-confirm', 'Passwords do not match');
-        return;
+document.addEventListener("click", function (event) {
+  const target = event.target;
+  if (target.classList.contains("toggle-password")) {
+    const targetInputId = target.dataset.target;
+    if (targetInputId) {
+      togglePasswordVisibility(targetInputId);
     }
-    
-    if (password.length < 6) {
-        showError('signup-password', 'Password must be at least 6 characters');
-        return;
-    }
-
-    showLoading('signup-btn');
-
-    try {
-        // Create user with Firebase
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        
-        // Update user profile with display name
-        await userCredential.user.updateProfile({
-            displayName: name
-        });
-        
-        alert(`Account created successfully for ${name}! You will be redirected to the dashboard.`);
-        this.reset();
-        
-        // Redirect to dashboard or home page after successful signup
-//window.location.href = 'Dash.html'; 
-    } catch (error) {
-        hideLoading('signup-btn');
-        console.error('Signup error:', error);
-        
-        // Handle specific Firebase errors
-        switch (error.code) {
-            case 'auth/email-already-in-use':
-                showError('signup-email', 'This email is already in use');
-                break;
-            case 'auth/invalid-email':
-                showError('signup-email', 'Please enter a valid email address');
-                break;
-            case 'auth/weak-password':
-                showError('signup-password', 'Password should be at least 6 characters');
-                break;
-            default:
-                showError('signup-email', 'An error occurred. Please try again.');
-                break;
-        }
-    }
+  }
 });
 
-// Login with email and password
-document.getElementById('login-form').addEventListener('submit', async function(e) {
+if (signupForm) {
+  signupForm.addEventListener("submit", async function (e) {
     e.preventDefault();
     clearErrorMessages();
-    
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
 
-    showLoading('login-btn');
+    const nameInput = document.getElementById("signup-name");
+    const emailInput = document.getElementById("signup-email");
+    const passwordInput = document.getElementById("signup-password");
+    const confirmPasswordInput = document.getElementById("signup-confirm");
 
-    try {
-        // Sign in with Firebase
-        const userCredential = await auth.signInWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-        
-        alert(`Welcome back, ${user.displayName || user.email}! You will be redirected to the dashboard.`);
-        this.reset();
-        
-        // Redirect to dashboard or home page after successful login
-    window.location.href = 'Dash.html';
-    } catch (error) {
-        hideLoading('login-btn');
-        console.error('Login error:', error);
-        
-        // Handle specific Firebase errors
-        switch (error.code) {
-            case 'auth/user-not-found':
-                showError('login-email', 'No account found with this email');
-                break;
-            case 'auth/wrong-password':
-                showError('login-password', 'Incorrect password');
-                break;
-            case 'auth/invalid-email':
-                showError('login-email', 'Please enter a valid email address');
-                break;
-            case 'auth/user-disabled':
-                showError('login-email', 'This account has been disabled');
-                break;
-            default:
-                showError('login-email', 'An error occurred. Please try again.');
-                break;
-        }
+    const name = nameInput?.value.trim() || "";
+    const email = emailInput?.value.trim() || "";
+    const password = passwordInput?.value || "";
+    const confirmPassword = confirmPasswordInput?.value || "";
+
+    let isValid = true;
+    if (!name) {
+      showError("signup-name", "Full Name is required");
+      isValid = false;
     }
-});
-
-// Password reset
-document.getElementById('reset-password-link').addEventListener('click', async function(e) {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    
     if (!email) {
-        alert('Please enter your email address first');
-        return;
+      showError("signup-email", "Email is required");
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      showError("signup-email", "Please enter a valid email address");
+      isValid = false;
     }
-    
+    if (!password) {
+      showError("signup-password", "Password is required");
+      isValid = false;
+    } else if (password.length < 6) {
+      showError("signup-password", "Password must be at least 6 characters");
+      isValid = false;
+    }
+    if (password !== confirmPassword) {
+      showError("signup-confirm", "Passwords do not match");
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
+    setLoadingState("signup-btn", true);
+
     try {
-        await auth.sendPasswordResetEmail(email);
-        alert('Password reset email sent. Please check your inbox.');
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+      console.log("Firebase Auth user created:", user.uid);
+
+      await updateProfile(user, { displayName: name });
+      console.log("Firebase Auth profile updated with display name:", name);
+
+      const userDocRef = doc(
+        db,
+        AppConfig.FIRESTORE_COLLECTIONS.USERS,
+        user.uid
+      );
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: user.email,
+        name: name,
+        createdAt: serverTimestamp(),
+        partnerId: null,
+      });
+      console.log("Firestore user document created for:", user.uid);
+
+      showNotification(
+        `Account created successfully for ${name}! Redirecting...`,
+        "success"
+      );
+      this.reset();
+      redirectTo("DASHBOARD");
     } catch (error) {
-        console.error('Password reset error:', error);
-        alert('Error sending password reset email. Please try again.');
+      console.error("Signup error:", error);
+      console.error("Signup error code:", error.code);
+
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          showError("signup-email", "This email is already registered.");
+          isValid = false;
+          break;
+        case "auth/invalid-email":
+          showError("signup-email", "Please enter a valid email address.");
+          isValid = false;
+          break;
+        case "auth/weak-password":
+          showError(
+            "signup-password",
+            "Password is too weak (min. 6 characters)."
+          );
+          isValid = false;
+          break;
+        case "firestore/permission-denied":
+          errorMessage = "Error saving profile. Please try again later.";
+          break;
+      }
+      if (isValid) {
+        showError("signup", errorMessage, true);
+      }
+    } finally {
+      setLoadingState("signup-btn", false);
     }
-});
-
-// Google authentication
-// function setupGoogleAuth(buttonId, isSignup = false) {
-//     const provider = new firebase.auth.GoogleAuthProvider();
-//     document.getElementById(buttonId).addEventListener('click', async function() {
-//         try {
-//             const result = await auth.signInWithPopup(provider);
-//             const user = result.user;
-            
-//             alert(`Welcome ${user.displayName}! You will be redirected to the dashboard.`);
-            
-//             // Redirect to dashboard or home page after successful authentication
-//             window.location.href = 'Dash.html';
-//         } catch (error) {
-//             console.error('Google auth error:', error);
-//             alert('Error authenticating with Google. Please try again.');
-//         }
-//     });
-// }
-
-// Facebook authentication
-function setupFacebookAuth(buttonId, isSignup = false) {
-    const provider = new firebase.auth.FacebookAuthProvider();
-    document.getElementById(buttonId).addEventListener('click', async function() {
-        try {
-            const result = await auth.signInWithPopup(provider);
-            const user = result.user;
-            
-            alert(`Welcome ${user.displayName}! You will be redirected to the dashboard.`);
-            
-            // Redirect to dashboard or home page after successful authentication
-            //window.location.href = 'Dash.html';
-        } catch (error) {
-            console.error('Facebook auth error:', error);
-            alert('Error authenticating with Facebook. Please try again.');
-        }
-    });
+  });
 }
 
-// Initialize social auth buttons
-// setupGoogleAuth('google-signup-btn', true);
-// setupGoogleAuth('google-login-btn');
-// setupFacebookAuth('facebook-signup-btn', true);
-// setupFacebookAuth('facebook-login-btn');
+if (loginForm) {
+  loginForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    clearErrorMessages();
 
-// Check if user is already logged in
-auth.onAuthStateChanged(user => {
-    if (user) {
-        // User is signed in, redirect to dashboard
-        //window.location.href = 'Dash.html';
+    const emailInput = document.getElementById("login-email");
+    const passwordInput = document.getElementById("login-password");
+    const email = emailInput?.value.trim() || "";
+    const password = passwordInput?.value || "";
+
+    let isValid = true;
+    if (!email) {
+      showError("login-email", "Email is required");
+      isValid = false;
     }
-});
+    if (!password) {
+      showError("login-password", "Password is required");
+      isValid = false;
+    }
+    if (!isValid) return;
+
+    setLoadingState("login-btn", true);
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      showNotification(
+        `Welcome back, ${user.displayName || user.email}! Redirecting...`,
+        "success"
+      );
+      this.reset();
+      redirectTo("DASHBOARD");
+    } catch (error) {
+      console.error("Login error:", error);
+      console.error("Login error code:", error.code);
+
+      let errorMessage = "An unexpected error occurred. Please try again.";
+      let showGeneralError = true;
+      switch (error.code) {
+        case "auth/user-not-found":
+        case "auth/invalid-credential":
+        case "auth/wrong-password":
+          showError("login", "Invalid email or password.", true);
+          showGeneralError = false;
+          break;
+        case "auth/invalid-email":
+          showError("login-email", "Please enter a valid email address.");
+          showGeneralError = false;
+          break;
+        case "auth/user-disabled":
+          showError("login", "This account has been disabled.", true);
+          showGeneralError = false;
+          break;
+        case "auth/too-many-requests":
+          errorMessage =
+            "Access temporarily disabled due to too many attempts. Please reset your password or try again later.";
+          break;
+      }
+      if (showGeneralError) {
+        showError("login", errorMessage, true);
+      }
+    } finally {
+      setLoadingState("login-btn", false);
+    }
+  });
+}
+
+if (resetPasswordLink) {
+  resetPasswordLink.addEventListener("click", async function (e) {
+    e.preventDefault();
+    clearErrorMessages();
+
+    const emailInput = document.getElementById("login-email");
+    const email = emailInput?.value.trim() || "";
+
+    if (!email) {
+      showError(
+        "login-email",
+        "Enter your email address above first to reset password."
+      );
+      emailInput?.focus();
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      showError("login-email", "Please enter a valid email address.");
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showNotification(
+        "Password reset email sent. Please check your inbox (and spam folder).",
+        "success"
+      );
+    } catch (error) {
+      console.error("Password reset error:", error);
+      if (error.code === "auth/invalid-email") {
+        showError("login-email", "Please enter a valid email address.");
+      } else if (error.code === "auth/user-not-found") {
+        showError("login-email", "No account found with this email address.");
+      } else {
+        showError(
+          "login",
+          "Error sending password reset email. Please try again.",
+          true
+        );
+      }
+    }
+  });
+}
+
+console.log("signup.js loaded and configured with Firestore integration.");

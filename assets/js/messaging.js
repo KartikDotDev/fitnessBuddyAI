@@ -1,229 +1,379 @@
-// Import necessary Firebase functions
-import app from './firebase-config.js'; //
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import { app, auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {
-  getFirestore, collection, query, where, limit, getDocs, doc, setDoc, getDoc, onSnapshot, addDoc, serverTimestamp, orderBy
+  collection,
+  query,
+  limit,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+  orderBy,
+  updateDoc,
+  writeBatch,
 } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js";
+import { AppConfig } from "./config.js";
+import { showNotification } from "./utils/ui-helpers.js";
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// --- DOM Elements ---
-const partnerListContainer = document.getElementById('partner-list-container');
-const newPartnerOptionsDiv = document.getElementById('new-partner-options');
-const chatWithHeader = document.getElementById('chat-with-header');
-const chatMessagesDiv = document.getElementById('chat-messages');
-const messageInput = document.getElementById('message-input');
-const sendButton = document.getElementById('send-button');
-const starterMessageButtons = document.querySelectorAll('.starter-message-btn');
+const partnerListContainer = document.getElementById("partner-list-container");
+const newPartnerOptionsDiv = document.getElementById("new-partner-options");
+const chatWithHeader = document.getElementById("chat-with-header");
+const chatHeaderDiv = document.getElementById("chat-header");
+const chatMessagesDiv = document.getElementById("chat-messages");
+const messageInput = document.getElementById("message-input");
+const sendButton = document.getElementById("send-button");
+const starterMessageButtons = document.querySelectorAll(".starter-message-btn");
+const togglePartnersBtn = document.getElementById("toggle-partners-btn");
+const messagesLayout = document.getElementById("messages-layout");
 
 let currentUserId = null;
+let currentUserData = null;
 let selectedPartnerId = null;
-let unsubscribeChat = null; // Function to stop listening to chat updates
+let unsubscribeChat = null;
 
-// --- Authentication ---
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    console.log("Messaging: User logged in:", user.uid);
     currentUserId = user.uid;
-    await checkUserPartnerStatus(currentUserId);
+    const userRef = doc(
+      db,
+      AppConfig.FIRESTORE_COLLECTIONS.USERS,
+      currentUserId
+    );
+    try {
+      let userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        console.warn(
+          `Messaging: User profile document not found for ID: ${currentUserId}. Attempting to create one.`
+        );
+        showNotification("Finalizing your profile setup...", "info");
+        try {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email || "N/A",
+            name:
+              user.displayName ||
+              user.email ||
+              `User ${user.uid.substring(0, 5)}`,
+            createdAt: serverTimestamp(),
+            partnerId: null,
+          });
+          userSnap = await getDoc(userRef);
+          if (!userSnap.exists())
+            throw new Error("Failed to fetch profile after creation.");
+          showNotification("Profile setup complete!", "success");
+        } catch (creationError) {
+          console.error("Msg: Failed create profile:", creationError);
+          showErrorState(
+            creationError.code === "permission-denied"
+              ? "Error: Perms missing."
+              : "Could not create profile."
+          );
+          setChatInputEnabled(false);
+          return;
+        }
+      }
+      currentUserData = userSnap.data();
+      setChatInputEnabled(true);
+      await checkUserPartnerStatus(currentUserId, currentUserData);
+    } catch (error) {
+      console.error("Msg: Error fetching user data:", error);
+      showErrorState("Error loading user data.");
+      setChatInputEnabled(false);
+    }
   } else {
-    console.log("Messaging: User logged out.");
     currentUserId = null;
-    // Redirect to login or disable messaging features
-    window.location.href = 'auth.html'; // Or handle appropriately
+    currentUserData = null;
+    selectedPartnerId = null;
+    if (unsubscribeChat) unsubscribeChat();
+    unsubscribeChat = null;
+    showErrorState("Please log in to use messaging.");
+    setChatInputEnabled(false);
+    if (partnerListContainer) partnerListContainer.innerHTML = "";
+    if (chatMessagesDiv) chatMessagesDiv.innerHTML = "";
+    if (newPartnerOptionsDiv) newPartnerOptionsDiv.innerHTML = "";
+    messagesLayout?.classList.remove("partners-hidden");
   }
 });
 
-// --- Partner Logic ---
+async function checkUserPartnerStatus(userId, userData) {
+  clearErrorState();
+  await fetchNewPartners(userId);
 
-async function checkUserPartnerStatus(userId) {
-  const userRef = doc(db, 'users', userId);
-  const userSnap = await getDoc(userRef);
+  messagesLayout?.classList.remove("partners-hidden");
+  updateToggleButtonIcon(false);
 
-  if (userSnap.exists() && userSnap.data().partnerId) {
-    selectedPartnerId = userSnap.data().partnerId;
-    console.log("User already has partner:", selectedPartnerId);
-    partnerListContainer.classList.add('hidden'); // Hide selector
-    await loadChat(userId, selectedPartnerId);
+  if (userData && userData.partnerId) {
+    selectedPartnerId = userData.partnerId;
+    const partnerRef = doc(
+      db,
+      AppConfig.FIRESTORE_COLLECTIONS.USERS,
+      selectedPartnerId
+    );
+    try {
+      const partnerSnap = await getDoc(partnerRef);
+      const partnerName = partnerSnap.exists()
+        ? partnerSnap.data().name ||
+          partnerSnap.data().email ||
+          `Buddy [${selectedPartnerId.substring(0, 5)}]`
+        : "your buddy";
+      await loadChat(userId, selectedPartnerId, partnerName);
+      setChatInputEnabled(true);
+    } catch (error) {
+      console.error("Msg: Error fetching partner:", error);
+      showErrorState("Could not load partner info.");
+      await loadChat(userId, selectedPartnerId, "your buddy");
+      setChatInputEnabled(true);
+    }
   } else {
-    console.log("User needs a partner. Fetching options...");
-    partnerListContainer.classList.remove('hidden'); // Show selector
-    fetchNewPartners(userId);
+    selectedPartnerId = null;
+    if (unsubscribeChat) unsubscribeChat();
+    unsubscribeChat = null;
+    if (chatWithHeader) chatWithHeader.textContent = "Find/Select Buddy";
+    if (chatMessagesDiv)
+      chatMessagesDiv.innerHTML =
+        "<p><i>Select a buddy from the list to start chatting.</i></p>";
+
+    setChatInputEnabled(false);
   }
 }
 
-async function fetchNewPartners(userId) {
-  newPartnerOptionsDiv.innerHTML = '<p>Finding potential buddies...</p>'; // Clear previous
+async function fetchNewPartners(requestingUserId) {
+  if (!newPartnerOptionsDiv) return;
+  newPartnerOptionsDiv.innerHTML = "<p>Loading...</p>";
   try {
-    // Query for users who don't have a partnerId set and are not the current user
-    const usersRef = collection(db, 'users');
-    // Consider adding a 'createdAt' field and ordering by it, or an 'isNewUser' flag
-    // Simple version: find users without a partner, excluding self
-    const q = query(
-      usersRef,
-      where('partnerId', '==', null), // Find users without a partner
-      // where('uid', '!=', userId), // Exclude self - Firestore limitation: inequality needs index/different approach
-      limit(10) // Fetch a bit more initially to filter out self
-    );
-
+    const usersRef = collection(db, AppConfig.FIRESTORE_COLLECTIONS.USERS);
+    const q = query(usersRef, limit(10));
     const querySnapshot = await getDocs(q);
     const partners = [];
     querySnapshot.forEach((doc) => {
-      // Make sure not to list the current user as a potential partner
-      if (doc.id !== userId) {
+      if (doc.id !== requestingUserId) {
         partners.push({ id: doc.id, ...doc.data() });
       }
     });
-
     if (partners.length > 0) {
-      // Limit to 3 actual options after filtering self
-      const limitedPartners = partners.slice(0, 3);
-      displayPartnerOptions(limitedPartners);
+      displayPartnerOptions(partners);
     } else {
-      newPartnerOptionsDiv.innerHTML = '<p>No new buddies available right now. Check back later!</p>';
+      newPartnerOptionsDiv.innerHTML = "<p>No other users.</p>";
     }
-
   } catch (error) {
-    console.error("Error fetching new partners: ", error);
-    newPartnerOptionsDiv.innerHTML = '<p>Error loading buddies.</p>';
+    console.error("Msg: Error fetching users:", error);
+    newPartnerOptionsDiv.innerHTML = "<p>Error loading list.</p>";
   }
 }
 
 function displayPartnerOptions(partners) {
-  newPartnerOptionsDiv.innerHTML = ''; // Clear loading message
-  partners.forEach(partner => {
-    const partnerDiv = document.createElement('div');
-    partnerDiv.classList.add('partner-item');
-    partnerDiv.textContent = partner.name || partner.email; // Display name or email
-    partnerDiv.dataset.partnerId = partner.id; // Store partner ID
-    partnerDiv.addEventListener('click', () => selectPartner(partner.id, partner.name || partner.email));
+  if (!newPartnerOptionsDiv) return;
+  newPartnerOptionsDiv.innerHTML = "<h4>Potential Buddies:</h4>";
+  partners.forEach((partner) => {
+    const partnerDiv = document.createElement("div");
+    partnerDiv.classList.add("partner-item");
+    const displayName =
+      partner.name || partner.email || `User [${partner.id.substring(0, 5)}]`;
+    partnerDiv.textContent = displayName;
+    if (partner.partnerId && partner.partnerId !== currentUserId) {
+      partnerDiv.textContent += " (Paired)";
+      partnerDiv.style.opacity = "0.6";
+      partnerDiv.style.cursor = "not-allowed";
+      partnerDiv.addEventListener("click", (e) => {
+        e.stopPropagation();
+        showNotification(`${displayName} is paired.`, "info");
+      });
+    } else if (partner.partnerId === currentUserId) {
+      partnerDiv.textContent += " (Your Buddy)";
+      partnerDiv.style.fontWeight = "bold";
+      partnerDiv.style.cursor = "default";
+    } else {
+      partnerDiv.dataset.partnerId = partner.id;
+      partnerDiv.dataset.partnerName = displayName;
+      partnerDiv.addEventListener("click", () =>
+        selectPartner(partner.id, displayName)
+      );
+    }
     newPartnerOptionsDiv.appendChild(partnerDiv);
   });
 }
 
 async function selectPartner(partnerId, partnerName) {
-  if (!currentUserId) {
-    console.error("Cannot select partner, user not logged in.");
+  if (!currentUserId || currentUserId === partnerId) {
+    showNotification("Cannot select.", "error");
     return;
   }
-  console.log(`Selecting partner: ${partnerId}`);
-
-  const currentUserRef = doc(db, 'users', currentUserId);
-  const partnerUserRef = doc(db, 'users', partnerId);
-
+  showNotification("Connecting...", "info");
+  const usersCollection = AppConfig.FIRESTORE_COLLECTIONS.USERS;
+  const currentUserRef = doc(db, usersCollection, currentUserId);
+  const partnerUserRef = doc(db, usersCollection, partnerId);
+  const batch = writeBatch(db);
   try {
-    // Use a transaction or batched write in a real app to ensure atomicity
-    await setDoc(currentUserRef, { partnerId: partnerId }, { merge: true });
-    await setDoc(partnerUserRef, { partnerId: currentUserId }, { merge: true });
-
+    const partnerSnap = await getDoc(partnerUserRef);
+    if (!partnerSnap.exists() || partnerSnap.data().partnerId) {
+      showNotification("Buddy unavailable.", "error");
+      await fetchNewPartners(currentUserId);
+      return;
+    }
+    batch.update(currentUserRef, { partnerId: partnerId });
+    batch.update(partnerUserRef, { partnerId: currentUserId });
+    await batch.commit();
     selectedPartnerId = partnerId;
-    partnerListContainer.classList.add('hidden'); // Hide selector
-    console.log("Partner selected successfully!");
+    if (currentUserData) currentUserData.partnerId = partnerId;
+    await fetchNewPartners(currentUserId);
+    showNotification(`Paired with ${partnerName}!`, "success");
+    setChatInputEnabled(true);
     await loadChat(currentUserId, selectedPartnerId, partnerName);
 
+    if (window.innerWidth > 768) {
+      messagesLayout?.classList.add("partners-hidden");
+      updateToggleButtonIcon(true);
+    }
   } catch (error) {
-    console.error("Error selecting partner: ", error);
-    // Optionally revert changes or notify user
+    console.error("Msg: Error selecting partner:", error);
+    showNotification("Pairing failed.", "error");
   }
 }
-
-// --- Chat Logic ---
 
 function generateChatId(userId1, userId2) {
-  // Create a consistent chat ID regardless of who initiates
-  return [userId1, userId2].sort().join('_');
+  return [userId1, userId2].sort().join("_");
 }
-
-async function loadChat(userId, partnerId, partnerName = 'your buddy') {
-  if (unsubscribeChat) {
-    unsubscribeChat(); // Stop listening to previous chat if any
-  }
-
-  chatWithHeader.textContent = `Chatting with ${partnerName}`;
-  chatMessagesDiv.innerHTML = ''; // Clear previous messages
-
-  const chatId = generateChatId(userId, partnerId);
-  const messagesRef = collection(db, 'chats', chatId, 'messages');
-  const q = query(messagesRef, orderBy('timestamp', 'asc')); // Order messages by time
-
-  // Listen for real-time updates
-  unsubscribeChat = onSnapshot(q, (querySnapshot) => {
-    console.log("Received chat update");
-    chatMessagesDiv.innerHTML = ''; // Clear messages on update to redraw
-    querySnapshot.forEach((doc) => {
-      displayMessage(doc.data());
-    });
-    chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight; // Scroll to bottom
-  }, (error) => {
-    console.error("Error listening to chat:", error);
-  });
-}
-
-function displayMessage(messageData) {
-  const messageElement = document.createElement('div');
-  messageElement.classList.add('message');
-  // Add a class to differentiate user's own messages
-  if (messageData.senderId === currentUserId) {
-    messageElement.classList.add('my-message');
-    messageElement.style.textAlign = 'right'; // Simple alignment
-    messageElement.style.marginLeft = 'auto'; // Push to right
-    messageElement.style.backgroundColor = '#00509d'; // Different color for own messages
-  } else {
-    messageElement.classList.add('partner-message');
-    messageElement.style.backgroundColor = '#444'; // Default partner message color
-  }
-  messageElement.style.padding = '5px 8px';
-  messageElement.style.margin = '5px';
-  messageElement.style.borderRadius = '8px';
-  messageElement.style.maxWidth = '70%'; // Limit width
-  messageElement.style.wordWrap = 'break-word'; // Wrap long words
-
-  messageElement.textContent = messageData.text;
-  chatMessagesDiv.appendChild(messageElement);
-}
-
-async function sendMessage() {
-  const messageText = messageInput.value.trim();
-  if (!messageText || !selectedPartnerId || !currentUserId) {
-    console.log("Cannot send message. Check text, partner selection, and login status.");
+async function loadChat(userId, partnerId, partnerName = "your buddy") {
+  if (!userId || !partnerId || !chatMessagesDiv || !chatWithHeader) {
+    showErrorState("Cannot load chat.");
     return;
   }
-
-  const chatId = generateChatId(currentUserId, selectedPartnerId);
-  const messagesRef = collection(db, 'chats', chatId, 'messages');
-
+  clearErrorState();
+  if (unsubscribeChat) unsubscribeChat();
+  unsubscribeChat = null;
+  chatWithHeader.textContent = `Chatting with ${partnerName}`;
+  chatMessagesDiv.innerHTML = "<p><i>Loading...</i></p>";
+  const chatId = generateChatId(userId, partnerId);
+  const messagesRef = collection(
+    db,
+    AppConfig.FIRESTORE_COLLECTIONS.CHATS,
+    chatId,
+    AppConfig.FIRESTORE_COLLECTIONS.MESSAGES
+  );
+  const q = query(messagesRef, orderBy("timestamp", "asc"), limit(100));
   try {
-    await addDoc(messagesRef, {
-      text: messageText,
-      senderId: currentUserId,
-      receiverId: selectedPartnerId, // Good to store receiver too
-      timestamp: serverTimestamp() // Use server time
-    });
-    console.log("Message sent.");
-    messageInput.value = ''; // Clear input field
+    unsubscribeChat = onSnapshot(
+      q,
+      (snapshot) => {
+        const html = snapshot.docs
+          .map((doc) => createMessageElementHtml(doc.data()))
+          .join("");
+        chatMessagesDiv.innerHTML = html || "<p><i>No messages yet.</i></p>";
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+      },
+      (error) => {
+        console.error("Msg listener error:", error);
+        showErrorState("Msg load error.");
+        if (unsubscribeChat) unsubscribeChat();
+        unsubscribeChat = null;
+      }
+    );
+    setChatInputEnabled(true);
   } catch (error) {
-    console.error("Error sending message: ", error);
+    console.error("Msg listener setup error:", error);
+    showErrorState("Chat connection error.");
+    setChatInputEnabled(false);
+  }
+}
+function createMessageElementHtml(messageData) {
+  const sanitized = (messageData.text || "")
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">");
+  const cls =
+    messageData.senderId === currentUserId ? "my-message" : "partner-message";
+  return `<div class="message ${cls}">${sanitized}</div>`;
+}
+async function sendMessage() {
+  const txt = messageInput.value.trim();
+  if (!txt || !selectedPartnerId || !currentUserId) return;
+  setChatInputEnabled(false);
+  const chatId = generateChatId(currentUserId, selectedPartnerId);
+  const ref = collection(
+    db,
+    AppConfig.FIRESTORE_COLLECTIONS.CHATS,
+    chatId,
+    AppConfig.FIRESTORE_COLLECTIONS.MESSAGES
+  );
+  try {
+    await addDoc(ref, {
+      text: txt,
+      senderId: currentUserId,
+      receiverId: selectedPartnerId,
+      timestamp: serverTimestamp(),
+    });
+    messageInput.value = "";
+  } catch (error) {
+    console.error("Send error:", error);
+    showNotification("Send failed.", "error");
+  } finally {
+    setChatInputEnabled(true);
+    messageInput.focus();
   }
 }
 
-// --- Event Listeners ---
-sendButton.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    sendMessage();
+function setChatInputEnabled(isEnabled) {
+  if (messageInput) messageInput.disabled = !isEnabled;
+  if (sendButton) sendButton.disabled = !isEnabled;
+  starterMessageButtons.forEach((b) => (b.disabled = !isEnabled));
+}
+function showErrorState(message) {
+  if (chatWithHeader) chatWithHeader.textContent = message;
+  console.error("Messaging Error:", message);
+}
+function clearErrorState() {
+  if (chatWithHeader && chatWithHeader.textContent.startsWith("Error")) {
+    chatWithHeader.textContent = selectedPartnerId
+      ? `Chatting with...`
+      : "Select Buddy";
   }
-});
+}
 
-starterMessageButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    const message = button.getAttribute('data-message');
-    messageInput.value = message; // Set input field value
-    // Optionally send immediately: sendMessage();
+function updateToggleButtonIcon(isPartnersHidden) {
+  if (togglePartnersBtn) {
+    const icon = togglePartnersBtn.querySelector("i");
+    if (icon) {
+      icon.className = isPartnersHidden
+        ? "fas fa-chevron-right"
+        : "fas fa-users";
+    }
+    togglePartnersBtn.title = isPartnersHidden
+      ? "Show Buddy List"
+      : "Hide Buddy List";
+  }
+}
+
+if (sendButton) sendButton.addEventListener("click", sendMessage);
+if (messageInput)
+  messageInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !messageInput.disabled) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+starterMessageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (messageInput && !messageInput.disabled) {
+      messageInput.value = button.getAttribute("data-message");
+      messageInput.focus();
+    }
   });
 });
 
-console.log("messaging.js loaded");
+if (togglePartnersBtn && messagesLayout) {
+  togglePartnersBtn.addEventListener("click", () => {
+    const isHidden = messagesLayout.classList.toggle("partners-hidden");
+    updateToggleButtonIcon(isHidden);
+    console.log("Partner list toggled. Hidden:", isHidden);
+  });
+} else {
+  console.warn("Could not find toggle button or messages layout for listener.");
+}
 
-// Initial check when script loads (in case auth state is already known)
-// Moved the initial check inside onAuthStateChanged to ensure auth is ready
+setChatInputEnabled(false);
+messagesLayout?.classList.remove("partners-hidden");
+updateToggleButtonIcon(false);
+console.log("messaging.js loaded with toggle logic.");

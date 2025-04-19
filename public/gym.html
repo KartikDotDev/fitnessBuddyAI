@@ -1,422 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gym Locator - FitnessBuddy</title>
-    <link rel="stylesheet" href="../assets/css/gymlocator.css">
-</head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="logo-container">
-            <img src="logo.png" alt="Fitness Buddy Logo" class="logo-img" />
-            <span class="logo-text">Fitness Buddy</span>
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/gymlocator.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      #map {
+        height: 450px;
+        background-color: #eee;
+      }
+      .leaflet-popup-content-wrapper {
+        border-radius: var(--border-radius-md, 8px);
+      }
+      .leaflet-popup-content {
+        font-family: var(--font-primary, sans-serif);
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .leaflet-popup-content strong {
+        font-weight: 600;
+        color: var(--dark-color, #333);
+        display: block;
+        margin-bottom: 4px;
+      }
+      .leaflet-popup-content p {
+        margin: 2px 0;
+        color: var(--gray-color, #666);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="navbar"></div>
+    <main class="container">
+      <h1 class="page-title">Find Gyms Near You</h1>
+
+      <div class="search-container">
+        <div class="search-box">
+          <input
+            type="text"
+            id="location-input"
+            class="search-input form-control"
+            placeholder="Enter city or address"
+          />
+          <button id="search-btn" class="btn btn-primary search-btn">
+            Search
+          </button>
+          <button id="use-my-location" class="btn btn-secondary search-btn">
+            Use My Location
+          </button>
+        </div>
+        <div class="filter-options">
+          <div class="filter-option">
+            <input type="checkbox" id="open-now" />
+            <label for="open-now">Open Now</label>
           </div>
-        <div class="nav-links">
-            <a href="dashboard">Dashboard</a>
-            <a href="friends">Friends</a>
-            <a href="gym-locator" class="active">Gym Locator</a>
-            <a href="workout">Workout</a>
-            <a href="messages">Messages</a>
+          <div class="filter-option">
+            <input type="checkbox" id="has-classes" />
+            <label for="has-classes">Has Classes</label>
+          </div>
+          <div class="filter-option">
+            <input type="checkbox" id="24-hours" />
+            <label for="24-hours">24/7 Access</label>
+          </div>
+          <div class="filter-option">
+            <label for="radius">Distance:</label
+            ><select id="radius" class="form-control">
+              <option value="1000">1 km</option>
+              <option value="2000">2 km</option>
+              <option value="5000" selected>5 km</option>
+              <option value="10000">10 km</option>
+              <option value="20000">20 km</option>
+            </select>
+          </div>
         </div>
-        <div class="user-section">
-            <span>Welcome, User</span>
-            <button class="logout-btn">Logout</button>
+      </div>
+
+      <div class="map-container">
+        <div id="map"></div>
+      </div>
+
+      <div class="gym-list" id="gym-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading gyms...</p>
         </div>
-    </nav>
+      </div>
+    </main>
+    <div id="footer"></div>
 
-    <!-- Main Content -->
-    <div class="container">
-        <h1 class="page-title">Find Gyms Near You</h1>
-        
-        <!-- Search Box -->
-        <div class="search-container">
-            <div class="search-box">
-                <input type="text" id="location-input" class="search-input" placeholder="Enter your location or allow location access">
-                <button id="search-btn" class="search-btn">Search</button>
-                <button id="use-my-location" class="search-btn">Use My Location</button>
-            </div>
-            <div class="filter-options">
-                <div class="filter-option">
-                    <input type="checkbox" id="open-now">
-                    <label for="open-now">Open Now</label>
-                </div>
-                <div class="filter-option">
-                    <input type="checkbox" id="has-classes">
-                    <label for="has-classes">Has Classes</label>
-                </div>
-                <div class="filter-option">
-                    <input type="checkbox" id="24-hours">
-                    <label for="24-hours">24/7 Access</label>
-                </div>
-                <div class="filter-option">
-                    <label for="radius">Distance:</label>
-                    <select id="radius">
-                        <option value="1000">1 km</option>
-                        <option value="2000">2 km</option>
-                        <option value="5000" selected>5 km</option>
-                        <option value="10000">10 km</option>
-                        <option value="20000">20 km</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
 
-        <!-- Map Container -->
-        <div class="map-container">
-            <div id="map"></div>
-            <div class="map-error">
-                <i>❗</i>
-                <p>Oops! Something went wrong.</p>
-                <p>This page didn't load Google Maps correctly. See the JavaScript console for technical details.</p>
-                <p>Don't worry! Sample gym data will be shown below.</p>
-            </div>
-        </div>
+    <script type="module" src="/assets/js/gym-locator.js"></script>
 
-        <!-- Gym List -->
-        <div class="gym-list" id="gym-list">
-            <!-- Gym cards will be inserted here dynamically -->
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading gyms near you...</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Global variables
-        let map;
-        let service;
-        let infowindow;
-        let markers = [];
-        let currentPosition;
-        let sampleData = null;
-        let useGoogleMaps = false;
-
-        // Sample data for when Google Maps API is not available
-        const sampleGyms = [
-            {
-                id: 1,
-                name: "Fitness Zone",
-                address: "123 Main Street, Downtown",
-                isOpen: true,
-                distance: 0.8,
-                rating: 4.7,
-                reviewCount: 128,
-                features: ["24/7 Access", "Group Classes", "Pool"],
-                imageUrl: "../assets/images/image1.jpeg"
-            },
-            {
-                id: 2,
-                name: "PowerFit Gym",
-                address: "456 Oak Avenue, Westside",
-                isOpen: true,
-                distance: 1.2,
-                rating: 4.5,
-                reviewCount: 87,
-                features: ["Group Classes", "Personal Training"],
-                imageUrl: "../assets/images/image2.jpeg"
-            },
-            {
-                id: 3,
-                name: "Iron Works",
-                address: "789 Steel Road, Industrial District",
-                isOpen: false,
-                distance: 2.4,
-                rating: 4.8,
-                reviewCount: 203,
-                features: ["24/7 Access", "Strength Focus"],
-                imageUrl: "../assets/images/image3.webp"
-            },
-            {
-                id: 4,
-                name: "Community Wellness Center",
-                address: "321 Park Lane, North Side",
-                isOpen: true,
-                distance: 3.0,
-                rating: 4.2,
-                reviewCount: 56,
-                features: ["Pool", "Group Classes"],
-                imageUrl: "../assets/images/image4.webp"
-            },
-            {
-                id: 5,
-                name: "Elite Fitness Club",
-                address: "555 High Street, Financial District",
-                isOpen: true,
-                distance: 3.5,
-                rating: 4.9,
-                reviewCount: 176,
-                features: ["24/7 Access", "Luxury Amenities", "Personal Training"],
-                imageUrl: "../assets/images/image5.jpeg"
-            },
-            {
-                id: 6,
-                name: "Budget Gym",
-                address: "111 Economy Road, South Side",
-                isOpen: true,
-                distance: 4.2,
-                rating: 3.8,
-                reviewCount: 42,
-                features: ["Affordable", "Basic Equipment"],
-                imageUrl: "../assets/images/image6.jpg"
-            }
-        ];
-
-        // Initialize the page
-        function init() {
-            try {
-                // Show sample data after a short delay to simulate loading
-                setTimeout(() => {
-                    displaySampleGyms();
-                    
-                    // Add event listeners for filters
-                    document.getElementById("open-now").addEventListener("change", filterGyms);
-                    document.getElementById("has-classes").addEventListener("change", filterGyms);
-                    document.getElementById("24-hours").addEventListener("change", filterGyms);
-                    document.getElementById("radius").addEventListener("change", filterGyms);
-                    
-                    document.getElementById("search-btn").addEventListener("click", handleSearch);
-                    document.getElementById("use-my-location").addEventListener("click", handleLocationSearch);
-                    document.getElementById("location-input").addEventListener("keypress", function(e) {
-                        if (e.key === "Enter") {
-                            handleSearch();
-                        }
-                    });
-                }, 1500);
-            } catch (error) {
-                console.error("Error initializing the page:", error);
-            }
-        }
-
-        // Display sample gyms
-        function displaySampleGyms() {
-            // Make a copy of the sample data to work with
-            sampleData = [...sampleGyms];
-            
-            // Clear the gym list
-            document.getElementById("gym-list").innerHTML = "";
-            
-            // Filter the gyms based on current filter settings
-            filterGyms();
-        }
-
-        // Filter gyms based on filter settings
-        function filterGyms() {
-            const openNow = document.getElementById("open-now").checked;
-            const hasClasses = document.getElementById("has-classes").checked;
-            const has24HourAccess = document.getElementById("24-hours").checked;
-            const maxDistance = parseInt(document.getElementById("radius").value) / 1000; // Convert to km
-            
-            // Apply filters to the sample data
-            let filteredGyms = sampleData.filter(gym => {
-                // Filter by open status if checked
-                if (openNow && !gym.isOpen) {
-                    return false;
-                }
-                
-                // Filter by classes if checked
-                if (hasClasses && !gym.features.includes("Group Classes")) {
-                    return false;
-                }
-                
-                // Filter by 24/7 access if checked
-                if (has24HourAccess && !gym.features.includes("24/7 Access")) {
-                    return false;
-                }
-                
-                // Filter by distance
-                if (gym.distance > maxDistance) {
-                    return false;
-                }
-                
-                return true;
-            });
-            
-            // Display the filtered gyms
-            displayGyms(filteredGyms);
-        }
-
-        // Display gyms
-        function displayGyms(gyms) {
-            const gymList = document.getElementById("gym-list");
-            gymList.innerHTML = "";
-            
-            if (gyms.length === 0) {
-                gymList.innerHTML = `
-                    <div class="no-results">
-                        <i>🔍</i>
-                        <h3>No gyms found</h3>
-                        <p>Try adjusting your filters or increasing your search radius.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            gyms.forEach(gym => {
-                const gymCard = document.createElement("div");
-                gymCard.className = "gym-card";
-                
-                const distanceText = gym.distance < 1 
-                    ? `${(gym.distance * 1000).toFixed(0)} m` 
-                    : `${gym.distance.toFixed(1)} km`;
-                
-                gymCard.innerHTML = `
-                    <div class="gym-image" style="background-image: url('${gym.imageUrl}')"></div>
-                    <div class="gym-info">
-                        <div class="gym-name">
-                            ${gym.name}
-                            <span class="gym-rating">⭐ ${gym.rating}</span>
-                        </div>
-                        <div class="gym-address">${gym.address} <span style="color: #4285f4;">(${distanceText})</span></div>
-                        <div class="gym-hours ${gym.isOpen ? 'open' : 'closed'}">
-                            ${gym.isOpen ? '✓ Open Now' : '✗ Closed'}
-                        </div>
-                        <div class="gym-features">
-                            ${gym.features.map(feature => `<span class="feature-tag">${feature}</span>`).join("")}
-                        </div>
-                        <button class="directions-btn">Get Directions</button>
-                    </div>
-                `;
-                
-                // Add hover effect
-                gymCard.addEventListener("mouseenter", () => {
-                    gymCard.style.transform = "translateY(-5px)";
-                    gymCard.style.boxShadow = "0 5px 15px rgba(0, 0, 0, 0.15)";
-                });
-                
-                gymCard.addEventListener("mouseleave", () => {
-                    gymCard.style.transform = "";
-                    gymCard.style.boxShadow = "";
-                });
-                
-                gymList.appendChild(gymCard);
-            });
-        }
-
-        // Handle search button click
-        function handleSearch() {
-            const locationInput = document.getElementById("location-input").value;
-            
-            if (!locationInput) {
-                alert("Please enter a location or use your current location.");
-                return;
-            }
-            
-            // Show loading indicator
-            document.getElementById("gym-list").innerHTML = `
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Searching for gyms near "${locationInput}"...</p>
-                </div>
-            `;
-            
-            // Simulate a delay to show loading indicator
-            setTimeout(() => {
-                // For now, just display the sample gyms
-                // In a real app, you would geocode the address and search near that location
-                sampleData = [...sampleGyms];
-                
-                // Randomize distances a bit to simulate a new location
-                sampleData.forEach(gym => {
-                    gym.distance = parseFloat((gym.distance * (0.8 + Math.random() * 0.4)).toFixed(1));
-                });
-                
-                // Sort by distance
-                sampleData.sort((a, b) => a.distance - b.distance);
-                
-                // Apply filters
-                filterGyms();
-            }, 1500);
-        }
-
-        // Handle "Use My Location" button click
-        function handleLocationSearch() {
-            if (navigator.geolocation) {
-                // Show loading indicator
-                document.getElementById("gym-list").innerHTML = `
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Finding your location...</p>
-                    </div>
-                `;
-                
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        // Update loading message
-                        document.getElementById("gym-list").innerHTML = `
-                            <div class="loading">
-                                <div class="spinner"></div>
-                                <p>Searching for gyms near your location...</p>
-                            </div>
-                        `;
-                        
-                        // Delay for demonstration purposes
-                        setTimeout(() => {
-                            // In a real app, you would use the coordinates to search for gyms
-                            sampleData = [...sampleGyms];
-                            
-                            // Sort by distance
-                            sampleData.sort((a, b) => a.distance - b.distance);
-                            
-                            // Apply filters
-                            filterGyms();
-                        }, 1500);
-                    },
-                    (error) => {
-                        alert("Error: Unable to get your location. Please enter your location manually.");
-                        document.getElementById("gym-list").innerHTML = "";
-                        displaySampleGyms();
-                    }
-                );
-            } else {
-                alert("Error: Your browser doesn't support geolocation. Please enter your location manually.");
-            }
-        }
-
-        // Initialize when the page loads
-        window.onload = init;
-
-        // This function would be called if Google Maps API loaded successfully
-        function initMap() {
-            useGoogleMaps = true;
-            // Hide the error message
-            document.querySelector(".map-error").style.display = "none";
-            
-            // Default location (center of map) if geolocation fails
-            const defaultLocation = { lat: 40.7128, lng: -74.0060 }; // New York
-            
-            // Initialize map with default center
-            map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 14,
-                center: defaultLocation,
-                mapTypeControl: true,
-                streetViewControl: true,
-                fullscreenControl: true,
-            });
-            
-            infowindow = new google.maps.InfoWindow();
-            
-            // The rest of your original Google Maps initialization code would go here
-        }
-
-        // Attempt to load Google Maps API
-        function loadGoogleMapsScript() {
-            const script = document.createElement("script");
-            script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyD-spJYTf3CHXNY_OBcP588qGpT0De-wSQ&libraries=places,geometry&callback=initMap";
-            script.defer = true;
-            script.async = true;
-            script.onerror = function() {
-                console.error("Google Maps API failed to load.");
-                // Continue with sample data
-                init();
-            };
-            document.head.appendChild(script);
-        }
-
-        // Try to load Google Maps, but continue with sample data if it fails
-        loadGoogleMapsScript();
-    </script>
-</body>
+    <script type="module" src="/assets/js/auth-guard.js"></script>
+    <script type="module" src="/assets/js/main.js"></script>
+  </body>
 </html>
