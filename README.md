@@ -23,8 +23,10 @@ fitnessBuddyAI/
 ├── public/               # Static assets
 ├── .vscode/              # VS Code settings
 ├── index.html            # Entry point of the app
-├── styles.css            # Main styling file
-├── script.js             # Core JS logic
+├── about.html            # about page
+| .
+| .
+| .
 └── README.md
 ```
 
@@ -45,6 +47,10 @@ fitnessBuddyAI/
 - 📱 **Responsive UI** for mobile and desktop use
 
 ## Design Decisions or Assumptions
+
+Program flow 
+![flowchart](https://github.com/user-attachments/assets/f25ae920-7d81-4286-9553-b1d3d0ac0951)
+
 
 - Chose **Firebase** for easy integration of authentication, real-time updates, and hosting.
 - Frontend built as a **static site** using vanilla JS to keep things lightweight and fast.
