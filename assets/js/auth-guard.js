@@ -62,43 +62,29 @@ onAuthStateChanged(auth, (user) => {
   checkNavbarAndUpdate();
 
   let currentPath = window.location.pathname;
-
   if (currentPath.endsWith("/index.html")) {
     currentPath = "/";
   } else if (currentPath !== "/" && currentPath.endsWith("/")) {
     currentPath = currentPath.slice(0, -1);
   }
 
-  const normalizeRoute = (route) => {
-    if (!route) return null;
-    if (route.endsWith("/index.html")) return "/";
-    if (route !== "/" && route.endsWith("/")) return route.slice(0, -1);
-    return route;
-  };
-
-  const normalizedPublicPages = [
+  const publicPages = [
     AppConfig.ROUTES.HOME,
     AppConfig.ROUTES.INDEX,
     AppConfig.ROUTES.SIGNUP,
     AppConfig.ROUTES.AUTH,
     AppConfig.ROUTES.ABOUT,
     AppConfig.ROUTES.BLOG,
-  ]
-    .map(normalizeRoute)
-    .filter((p) => p !== null);
+  ].filter((p) => p);
 
-  const normalizedAuthPages = [
+  const authPages = [
     AppConfig.ROUTES.SIGNUP,
     AppConfig.ROUTES.LOGIN,
     AppConfig.ROUTES.AUTH,
-  ]
-    .map(normalizeRoute)
-    .filter((p) => p !== null);
+  ].filter((p) => p);
 
-  const isAuthPage = normalizedAuthPages.includes(currentPath);
-
-  const isPublicPage =
-    currentPath === "/" || normalizedPublicPages.includes(currentPath);
+  const isAuthPage = authPages.includes(currentPath);
+  const isPublicPage = publicPages.includes(currentPath);
   const isProtectedPage = !isPublicPage && !isAuthPage;
 
   console.log(
