@@ -1,5 +1,5 @@
 <nav class="navbar">
-  <a href="/public/index.html" class="logo-container">
+  <a href="index.html" class="logo-container">
     <img
       src="/assets/images/logo.png"
       alt="Fitness Buddy Logo"
@@ -10,20 +10,20 @@
 
   <div class="navbar-links-container" id="navbar-links-container">
     <ul class="nav-links">
-      <li><a href="/public/index.html" data-nav-id="home">Home</a></li>
-      <li><a href="/public/blog.html" data-nav-id="blog">Blog</a></li>
-      <li><a href="/public/about_us.html" data-nav-id="about">About Us</a></li>
+      <li><a href="index.html" data-nav-id="home">Home</a></li>
+      <li><a href="blog.html" data-nav-id="blog">Blog</a></li>
+      <li><a href="about_us.html" data-nav-id="about">About Us</a></li>
       <li class="auth-required" style="display: none">
-        <a href="/public/Dash.html" data-nav-id="dashboard">Dashboard</a>
+        <a href="Dash.html" data-nav-id="dashboard">Dashboard</a>
       </li>
       <li class="auth-required" style="display: none">
-        <a href="/public/workout.html" data-nav-id="workout">Workout</a>
+        <a href="workout.html" data-nav-id="workout">Workout</a>
       </li>
       <li class="auth-required" style="display: none">
-        <a href="/public/gym.html" data-nav-id="gym">Gym Locator</a>
+        <a href="gym.html" data-nav-id="gym">Gym Locator</a>
       </li>
       <li class="auth-required" style="display: none">
-        <a href="/public/messages.html" data-nav-id="messages">Messages</a>
+        <a href="messages.html" data-nav-id="messages">Messages</a>
       </li>
     </ul>
   </div>
@@ -35,7 +35,7 @@
     </button>
 
     <div class="auth-guest" style="display: block">
-      <a href="/public/signup.html" class="btn btn-nav-action"
+      <a href="signup.html" class="btn btn-nav-action"
         >Sign Up / Login</a
       >
     </div>
@@ -62,7 +62,7 @@
         const navLinks = document.querySelectorAll(".navbar .nav-links a");
         const homeRoute = window.AppConfig?.ROUTES?.HOME || "/";
         const indexRoute =
-          window.AppConfig?.ROUTES?.INDEX || "/public/index.html";
+          window.AppConfig?.ROUTES?.INDEX || "index.html";
 
         navLinks.forEach((link) => {
           const linkPath = link.getAttribute("href");
