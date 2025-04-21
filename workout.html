@@ -1,894 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fitness Tracker - Workouts</title>
-    <style>
-        /* Global Styles */
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --secondary: #10b981;
-            --dark: #1f2937;
-            --light: #f9fafb;
-            --gray: #6b7280;
-            --light-gray: #e5e7eb;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: var(--light);
-        }
-        
-        .navbar {
-            background-color: var(--primary);
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-        }
-        
-        .logo i {
-            margin-right: 0.5rem;
-        }
-        
-        .nav-links {
-            display: flex;
-            list-style: none;
-        }
-        
-        .nav-links li {
-            margin: 0 1rem;
-        }
-        
-        .nav-links a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 0;
-            border-bottom: 2px solid transparent;
-            transition: border-color 0.3s;
-        }
-        
-        .nav-links a:hover,
-        .nav-links a.active {
-            border-color: white;
-        }
-        
-        .user-menu {
-            display: flex;
-            align-items: center;
-        }
-        
-        .user-menu .btn {
-            background-color: white;
-            color: var(--primary);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            margin-left: 1rem;
-            transition: background-color 0.3s;
-        }
-        
-        .user-menu .btn:hover {
-            background-color: var(--light-gray);
-        }
-        
-        
-        /* Main Content */
-        h1 {
-            margin: 30px 0 20px;
-            color: #2c3e50;
-            text-align: center;
-        }
-        
-        /* Workout Plans Section */
-        .workout-plans {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            text-align: center;
-          }
-          
-          .workout-plans h2 {
-            font-size: 32px;
-            color: #333;
-            margin-bottom: 10px;
-          }
-          
-          .workout-plans p {
-            font-size: 18px;
-            color: #666;
-            margin-bottom: 30px;
-          }
-          
-          .plans-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            justify-items: center;
-          }
-          
-          .plan-card {
-            background-color: white;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            width: 100%;
-            max-width: 350px;
-            transition: transform 0.2s ease;
-          }
-          
-          .plan-card:hover {
-            transform: translateY(-6px);
-          }
-          
-          .plan-card h3 {
-            font-size: 20px;
-            color: #222;
-            margin-bottom: 10px;
-          }
-          
-          .plan-card p {
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 20px;
-          }
-          
-          .plan-card .btn {
-            background-color: #4a90e2;
-            color: white;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-          }
-          
-          .plan-card .btn:hover {
-            background-color: #3b7dd8;
-          }
-          
-        
-        /* Workout Log Section */
-        .workout-log {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background-color: #fff;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-          }
-          
-          .workout-log h2 {
-            font-size: 32px;
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          
-          .workout-log h3 {
-            font-size: 24px;
-            color: #444;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            text-align: center;
-          }
-          
-          #workout-form {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-          }
-          
-          .log-form {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-          }
-          
-          .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 15px;
-          }
-          
-          .form-group label {
-            font-size: 16px;
-            color: #555;
-          }
-          
-          .form-group input,
-          .form-group select,
-          .form-group textarea {
-            padding: 10px 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            transition: border-color 0.2s ease;
-          }
-          
-          .form-group input:focus,
-          .form-group select:focus,
-          .form-group textarea:focus {
-            border-color: #4a90e2;
-            outline: none;
-          }
-          
-          
-          .btn-add-exercise,
-          .btn-submit {
-            background-color: #4a90e2;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            width: fit-content;
-            align-self: center;
-            transition: background-color 0.2s ease;
-          }
-          
-          .btn-add-exercise:hover,
-          .btn-submit:hover {
-            background-color: #3b7dd8;
-          }
-          
-          #exercise-list-container {
-            padding: 10px;
-          }
-          
-          .exercise-list {
-            list-style: none;
-            padding-left: 0;
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-          }
-          
-          .exercise-list li {
-            padding: 10px;
-            background-color: #f5f7fa;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            color: #333;
-          }
-          
-        
-        /* Workout History */
-        .workout-history {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            text-align: center;
-        }
-        
-        .workout-history h2 {
-            margin-bottom: 25px;
-            color: #2c3e50;
-            font-size: 32px;
-        }
-        
-        .history-container {
-            max-height: 500px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            padding: 30px;
-            background-color: #f7f9fb;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            text-align: left;
-        }
-        
-        .history-item {
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            background-color: #ffffff;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .history-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .history-date {
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .history-exercises {
-            margin-top: 12px;
-        }
-        
-        .history-exercise {
-            margin-bottom: 8px;
-            padding-left: 12px;
-            border-left: 3px solid #3498db;
-            font-size: 16px;
-            color: #34495e;
-        }
-        
-        .exercise-list {
-            list-style: none;
-            margin-top: 12px;
-            padding-left: 0;
-        }
-        
-        .exercise-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 15px;
-            color: #2c3e50;
-        }
-        
-        .exercise-list-item:last-child {
-            border-bottom: none;
-        }
-        
-        .exercise-details {
-            flex: 1;
-        }
-        
-        .remove-exercise {
-            color: #e74c3c;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        .remove-exercise:hover {
-            text-decoration: underline;
-        }
-        
-        .no-history {
-            padding: 30px;
-            font-size: 18px;
-            background-color: #fff;
-            border: 2px dashed #ccc;
-            border-radius: 10px;
-            color: #7f8c8d;
-        }
-        .history-card {
-            background-color: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .history-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-        }
-        
-        .history-card h4 {
-            margin-bottom: 10px;
-            color: #2c3e50;
-            font-size: 20px;
-        }
-        
-        .history-card p {
-            margin: 6px 0;
-            color: #555;
-            font-size: 16px;
-        }
-        
-        .exercise-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 16px;
-            border-top: 1px solid #eee;
-        }
-        
-        .exercise-list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 16px;
-            color: #34495e;
-        }
-        
-        .exercise-list-item:last-child {
-            border-bottom: none;
-        }
-        
-        .exercise-details {
-            font-weight: 500;
-            color: #2c3e50;
-        }
-        
-        /* MEDIA QUERIES FOR RESPONSIVENESS */
 
-/* For tablets and smaller (max-width: 1024px) */
-@media (max-width: 1024px) {
-    .navbar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
+    <link rel="stylesheet" href="assets/css/workout.css" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <div id="navbar"></div>
 
-    .nav-links {
-        flex-wrap: wrap;
-        margin-top: 10px;
-    }
-
-    .nav-links li {
-        margin: 5px 10px;
-    }
-
-    .log-form {
-        grid-template-columns: 1fr;
-    }
-
-    .plans-container {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    }
-}
-
-/* For small tablets and large phones (max-width: 768px) */
-@media (max-width: 768px) {
-    .logo {
-        font-size: 1.2rem;
-    }
-
-    .nav-links a {
-        font-size: 14px;
-    }
-
-    .workout-plans h2,
-    .workout-log h2,
-    .workout-history h2 {
-        font-size: 26px;
-    }
-
-    .plan-card {
-        padding: 16px;
-        max-width: 90%;
-    }
-
-    .plan-card h3 {
-        font-size: 18px;
-    }
-
-    .plan-card p {
-        font-size: 14px;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        font-size: 15px;
-        padding: 8px 10px;
-    }
-
-    .btn-add-exercise,
-    .btn-submit {
-        font-size: 13px;
-        padding: 10px 16px;
-    }
-
-    .history-item {
-        padding: 16px;
-    }
-
-    .history-date {
-        font-size: 16px;
-    }
-
-    .history-exercise {
-        font-size: 14px;
-    }
-
-    .exercise-list-item {
-        font-size: 14px;
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-
-/* For mobile devices (max-width: 480px) */
-@media (max-width: 480px) {
-    .navbar {
-        padding: 1rem;
-    }
-
-    .logo {
-        font-size: 1rem;
-    }
-
-    .user-menu .btn {
-        font-size: 13px;
-        padding: 8px 12px;
-    }
-
-    h1 {
-        font-size: 22px;
-        margin: 20px 0;
-    }
-
-    .workout-plans,
-    .workout-log,
-    .workout-history {
-        padding: 20px 10px;
-    }
-
-    .plans-container {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    .plan-card {
-        padding: 14px;
-    }
-
-    .workout-log h3 {
-        font-size: 20px;
-    }
-
-    .form-group label {
-        font-size: 14px;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-        font-size: 14px;
-        padding: 8px;
-    }
-
-    .btn-add-exercise,
-    .btn-submit {
-        font-size: 12px;
-        padding: 8px 14px;
-    }
-
-    .history-item {
-        padding: 12px;
-    }
-
-    .history-date {
-        font-size: 15px;
-    }
-
-    .history-exercise {
-        font-size: 13px;
-    }
-
-    .no-history {
-        font-size: 16px;
-        padding: 20px;
-    }
-}
-
-        
-    </style>
-</head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="logo">
-            <i class="fas fa-dumbbell"></i>
-            FitnessBuddy
-        </div>
-        <ul class="nav-links">
-            <li><a href="#" >Dashboard</a></li>
-            <li><a href="#">Friends</a></li>
-            <li><a href="#">Gym Locator</a></li>
-            <li><a href="#" class="active">Workout</a></li>
-            <li><a href="#">Messages</a></li>
-        </ul>
-        <div class="user-menu">
-            <span>Welcome, User</span>
-            <button class="btn" id="logout-btn">Logout</button>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
     <div class="container">
-        <h1>Workout Tracker</h1>
-        
-        <!-- Workout Plans Section -->
-        <section class="workout-plans">
-            <h2>Workout Plans</h2>
-            <p>Choose a workout plan or create your own custom workout.</p>
-            
-            <div class="plans-container">
-                <div class="plan-card">
-                    <h3>Full Body Strength</h3>
-                    <p>A comprehensive workout targeting all major muscle groups.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('full-body')">Start Workout</button>
-                </div>
-                
-                <div class="plan-card">
-                    <h3>Upper Body Focus</h3>
-                    <p>Concentrate on chest, back, shoulders, and arms.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('upper-body')">Start Workout</button>
-                </div>
-                
-                <div class="plan-card">
-                    <h3>Lower Body Power</h3>
-                    <p>Build strength and power in legs and glutes.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('lower-body')">Start Workout</button>
-                </div>
-                
-                <div class="plan-card">
-                    <h3>Core & Abs</h3>
-                    <p>Strengthen your core muscles and develop abs.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('core')">Start Workout</button>
-                </div>
-                
-                <div class="plan-card">
-                    <h3>HIIT Cardio</h3>
-                    <p>High-intensity interval training for maximum calorie burn.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('hiit')">Start Workout</button>
-                </div>
-                
-                <div class="plan-card">
-                    <h3>Custom Workout</h3>
-                    <p>Create your own workout routine.</p>
-                    <button class="btn" onclick="loadWorkoutPlan('custom')">Create Custom</button>
-                </div>
+      <section class="workout-plans">
+        <h2>Workout Plans</h2>
+        <p>Choose a workout plan or create your own custom workout below.</p>
+
+        <div class="plans-container">
+          <div class="plan-card" data-plan="full-body">
+            <h3>Full Body Strength</h3>
+            <p>A comprehensive workout targeting all major muscle groups.</p>
+            <button class="btn btn-load-plan">Load Plan</button>
+          </div>
+
+          <div class="plan-card" data-plan="upper-body">
+            <h3>Upper Body Focus</h3>
+            <p>Concentrate on chest, back, shoulders, and arms.</p>
+            <button class="btn btn-load-plan">Load Plan</button>
+          </div>
+
+          <div class="plan-card" data-plan="lower-body">
+            <h3>Lower Body Power</h3>
+            <p>Build strength and power in legs and glutes.</p>
+            <button class="btn btn-load-plan">Load Plan</button>
+          </div>
+
+          <div class="plan-card" data-plan="core">
+            <h3>Core & Abs</h3>
+            <p>Strengthen your core muscles and develop abs.</p>
+            <button class="btn btn-load-plan">Load Plan</button>
+          </div>
+
+          <div class="plan-card" data-plan="hiit">
+            <h3>HIIT Cardio</h3>
+            <p>High-intensity interval training for maximum calorie burn.</p>
+            <button class="btn btn-load-plan">Load Plan</button>
+          </div>
+
+          <div class="plan-card" data-plan="custom">
+            <h3>Custom Workout</h3>
+            <p>Clear the list below and add exercises manually.</p>
+
+            <button class="btn btn-load-plan">Start Custom</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="workout-log">
+        <h2>Log Your Workout</h2>
+        <form id="workout-form">
+          <div class="log-form">
+            <div>
+              <div class="form-group">
+                <label for="workout-date">Date</label>
+                <input type="date" id="workout-date" required />
+              </div>
+
+              <div class="form-group">
+                <label for="workout-type">Workout Type</label>
+                <select id="workout-type" required>
+                  <option value="">Select a workout type</option>
+                  <option value="Full Body">Full Body</option>
+                  <option value="Upper Body">Upper Body</option>
+                  <option value="Lower Body">Lower Body</option>
+                  <option value="Core">Core</option>
+                  <option value="HIIT">HIIT</option>
+                  <option value="Cardio">Cardio</option>
+                  <option value="Custom">Custom</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="workout-duration">Duration (minutes)</label>
+                <input
+                  type="number"
+                  id="workout-duration"
+                  min="1"
+                  placeholder="e.g., 45"
+                  required
+                />
+              </div>
             </div>
-        </section>
-        
-        <!-- Workout Log Section -->
-        <section class="workout-log">
-            <h2>Log Your Workout</h2>
-            <form id="workout-form">
-                <div class="log-form">
-                    <div>
-                        <div class="form-group">
-                            <label for="workout-date">Date</label>
-                            <input type="date" id="workout-date" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="workout-type">Workout Type</label>
-                            <select id="workout-type" required>
-                                <option value="">Select a workout type</option>
-                                <option value="Full Body">Full Body</option>
-                                <option value="Upper Body">Upper Body</option>
-                                <option value="Lower Body">Lower Body</option>
-                                <option value="Core">Core</option>
-                                <option value="HIIT">HIIT</option>
-                                <option value="Cardio">Cardio</option>
-                                <option value="Custom">Custom</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="workout-duration">Duration (minutes)</label>
-                            <input type="number" id="workout-duration" min="1" required>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div class="form-group">
-                            <label for="workout-notes">Notes</label>
-                            <textarea id="workout-notes" rows="4" placeholder="How did the workout feel? Any achievements?"></textarea>
-                        </div>
-                    </div>
-                </div>
-                
-                <h3>Exercises</h3>
-                <div id="exercises-container">
-                    <!-- Exercise inputs will be added here -->
-                </div>
-                
-                <button type="button" class="btn-add-exercise" id="add-exercise">+ Add Exercise</button>
-                
-                <div id="exercise-list-container">
-                    <ul class="exercise-list" id="exercise-list">
-                        <!-- Added exercises will appear here -->
-                    </ul>
-                </div>
-                
-                <button type="submit" class="btn-submit">Save Workout</button>
-            </form>
-        </section>
-        
-        <!-- Workout History Section -->
-        <section class="workout-history">
-            <h2>Your Workout History</h2>
-            <div class="history-container" id="history-container">
-                <!-- Workout history will be added here -->
-                <div class="no-history" id="no-history">
-                    No workout history yet. Start logging your workouts!
-                </div>
+
+            <div>
+              <div class="form-group">
+                <label for="workout-notes">Notes (Optional)</label>
+                <textarea
+                  id="workout-notes"
+                  rows="4"
+                  placeholder="How did the workout feel? Any achievements?"
+                ></textarea>
+              </div>
             </div>
-        </section>
+          </div>
+
+          <h3>Exercises</h3>
+
+          <button type="button" class="btn-add-exercise" id="add-exercise">
+            + Add Exercise Manually
+          </button>
+
+          <div id="exercise-list-container">
+            <ul class="exercise-list" id="exercise-list">
+              <li class="exercise-list-item">
+                <div class="exercise-details">Squats</div>
+                <div>3 sets × 12 reps</div>
+                <span class="remove-exercise"> ❌</span>
+              </li>
+              -->
+            </ul>
+          </div>
+
+          <button type="submit" class="btn-submit">Save Workout Log</button>
+        </form>
+      </section>
+
+      <section class="workout-history">
+        <h2>Your Workout History</h2>
+        <div class="history-container" id="history-container">
+          <div class="no-history" id="no-history" style="display: none">
+            No workout history yet. Start logging your workouts!
+          </div>
+
+          <div
+            class="loading-history"
+            style="text-align: center; padding: 20px"
+          >
+            <p>Loading history...</p>
+          </div>
+        </div>
+      </section>
     </div>
 
-    <script type="module">
-        // Firebase v9+ (modular) with Firestore
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-      
-        const firebaseConfig = {
-          apiKey: "AIzaSyAK2rLIcEm4ZIUodPWhyQwzwTVJM2wZWzo",
-          authDomain: "fitness-buddy-e44f7.firebaseapp.com",
-          projectId: "fitness-buddy-e44f7",
-          storageBucket: "fitness-buddy-e44f7.appspot.com",
-          messagingSenderId: "750411075422",
-          appId: "1:750411075422:web:2ef218847e9c9fe74e09cf",
-          measurementId: "G-VE18CRGTZV"
-        };
-      
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-      
-        let exercises = [];
-      
-        const addExerciseBtn = document.getElementById('add-exercise');
-        const exerciseList = document.getElementById('exercise-list');
-        const exercisesContainer = document.getElementById('exercises-container');
-        const form = document.getElementById('workout-form');
-        const historyContainer = document.getElementById('history-container');
-        const noHistory = document.getElementById('no-history');
-      
-        function addExerciseToList(name, sets, reps) {
-          const li = document.createElement('li');
-          li.textContent = `${name} - ${sets} sets × ${reps} reps`;
-          exerciseList.appendChild(li);
-        }
-      
-        addExerciseBtn.addEventListener('click', () => {
-          const name = prompt("Exercise Name:");
-          const sets = prompt("Sets:");
-          const reps = prompt("Reps:");
-      
-          if (name && sets && reps) {
-            const exercise = { name, sets, reps };
-            exercises.push(exercise);
-            addExerciseToList(name, sets, reps);
-          }
-        });
-      
-        form.addEventListener('submit', async (e) => {
-          e.preventDefault();
-      
-          const date = document.getElementById('workout-date').value;
-          const type = document.getElementById('workout-type').value;
-          const duration = document.getElementById('workout-duration').value;
-          const notes = document.getElementById('workout-notes').value;
-      
-          if (!date || !type || !duration) {
-            alert("Please fill in all required fields");
-            return;
-          }
-      
-          const workoutData = {
-            date,
-            type,
-            duration: parseInt(duration),
-            notes,
-            exercises
-          };
-      
-          try {
-            await addDoc(collection(db, "workouts"), workoutData);
-            alert("Workout saved!");
-            form.reset();
-            exerciseList.innerHTML = '';
-            exercisesContainer.innerHTML = '';
-            exercises = [];
-            loadWorkoutHistory();
-          } catch (error) {
-            console.error("Error saving workout:", error);
-            alert("Error saving workout");
-          }
-        });
-      
-        async function loadWorkoutHistory() {
-          try {
-            const querySnapshot = await getDocs(collection(db, "workouts"));
-            historyContainer.innerHTML = '';
-            if (querySnapshot.empty) {
-              noHistory.style.display = 'block';
-              return;
-            }
-            noHistory.style.display = 'none';
-            querySnapshot.forEach((doc) => {
-              const workout = doc.data();
-              const div = document.createElement('div');
-              div.className = 'history-card';
-              div.innerHTML = `
-                <h4>${workout.date} - ${workout.type}</h4>
-                <p><strong>Duration:</strong> ${workout.duration} minutes</p>
-                <p><strong>Notes:</strong> ${workout.notes || 'None'}</p>
-                <ul class="exercise-list">
-  ${(workout.exercises || []).map(ex => `
-    <li class="exercise-list-item">
-      <div class="exercise-details">${ex.name}</div>
-      <div>${ex.sets} sets × ${ex.reps} reps</div>
-    </li>`).join('')}
-</ul>
+    <div id="footer"></div>
 
-              `;
-              historyContainer.appendChild(div);
-            });
-          } catch (error) {
-            console.error("Error loading history:", error);
-            alert("Failed to load workout history");
-          }
-        }
-      
-        function loadWorkoutPlan(plan) {
-          exercises = [];
-          exerciseList.innerHTML = '';
-      
-          let planExercises = [];
-      
-          if (plan === 'full-body') {
-            planExercises = [
-              { name: 'Squats', sets: 3, reps: 12 },
-              { name: 'Push-ups', sets: 3, reps: 15 },
-              { name: 'Deadlifts', sets: 3, reps: 10 }
-            ];
-          } else if (plan === 'upper-body') {
-            planExercises = [
-              { name: 'Bench Press', sets: 3, reps: 10 },
-              { name: 'Shoulder Press', sets: 3, reps: 12 },
-              { name: 'Pull-ups', sets: 3, reps: 8 }
-            ];
-          } else if (plan === 'lower-body') {
-            planExercises = [
-              { name: 'Lunges', sets: 3, reps: 12 },
-              { name: 'Leg Press', sets: 3, reps: 10 },
-              { name: 'Calf Raises', sets: 3, reps: 15 }
-            ];
-          } else if (plan === 'core') {
-            planExercises = [
-              { name: 'Plank', sets: 3, reps: 60 },
-              { name: 'Crunches', sets: 3, reps: 20 },
-              { name: 'Leg Raises', sets: 3, reps: 15 }
-            ];
-          } else if (plan === 'hiit') {
-            planExercises = [
-              { name: 'Jumping Jacks', sets: 3, reps: 30 },
-              { name: 'Burpees', sets: 3, reps: 15 },
-              { name: 'Mountain Climbers', sets: 3, reps: 30 }
-            ];
-          }
-      
-          planExercises.forEach(ex => {
-            exercises.push(ex);
-            addExerciseToList(ex.name, ex.sets, ex.reps);
-          });
-        }
-      
-        window.loadWorkoutPlan = loadWorkoutPlan;
-      
-        loadWorkoutHistory();
-    </script>
-      
-</body>
+    <script type="module" src="assets/js/workout.js"></script>
+    <script type="module" src="assets/js/auth-guard.js"></script>
+    <script type="module" src="assets/js/main.js"></script>
+  </body>
 </html>
